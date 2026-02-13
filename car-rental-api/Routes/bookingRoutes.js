@@ -28,5 +28,5 @@ router.delete('/:id', mongoIdParam, cancelBooking);
 
 // Routes admin
 router.get('/admin/all', role('admin'), getAllBookings);
-
+// export router 
 module.exports = router;
