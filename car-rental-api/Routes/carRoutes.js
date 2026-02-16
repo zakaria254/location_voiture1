@@ -1,49 +1,33 @@
-import express from 'express';
-import {
-  createCar,
-  getAllCars,
-  getCarById,
-  updateCar,
-  deleteCar
-} from '../controllers/carController.js';
-import { protect, role } from '../middlewares/authMiddleware.js';
-import { validate } from '../middlewares/validateMiddleware.js';
-import {
-  createCarValidation,
-  updateCarValidation
-} from '../validators/carValidator.js';
-import { mongoIdParam } from '../validators/commonValidator.js';
+// routes/carRoutes.js
+// Routes CRUD pour les voitures.
+// GET = public, POST/PUT/DELETE = admin uniquement.
 
+const express = require('express');
 const router = express.Router();
 
-router.get('/', getAllCars);
-router.get('/:id', mongoIdParam, validate, getCarById);
-
-router.use(protect);
-
-router.post(
-  '/',
-  role('admin'),
-  createCarValidation,
-  validate,
-  createCar
-);
-
-router.put(
-  '/:id',
-  role('admin'),
-  mongoIdParam,
-  updateCarValidation,
-  validate,
-  updateCar
-);
-
-router.delete(
-  '/:id',
-  role('admin'),
-  mongoIdParam,
-  validate,
+const {
+  getAllCars,
+  getCarById,
+  createCar,
+  updateCar,
   deleteCar
-);
+} = require('../controllers/carController');
 
-export default router;
+const auth = require('../middlewares/auth');
+const role = require('../middlewares/role');
+const {
+  carRules,
+  carUpdateRules,
+  mongoIdParam
+} = require('../middlewares/validator');
+
+// Routes publiques
+router.get('/', getAllCars);
+router.get('/:id', mongoIdParam, getCarById);
+
+// Routes admin uniquement
+router.post('/', auth, role('admin'), carRules, createCar);
+router.put('/:id', auth, role('admin'), mongoIdParam, carUpdateRules, updateCar);
+router.delete('/:id', auth, role('admin'), mongoIdParam, deleteCar);
+
+module.exports = router;
