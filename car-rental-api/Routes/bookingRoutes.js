@@ -1,33 +1,32 @@
-import express from 'express';
-import {
-  createBooking,
-  getMyBookings,
-  getAllBookings,
-  getBookingById,
-  cancelBooking
-} from '../controllers/bookingController.js';
-import { protect, role } from '../middlewares/authMiddleware.js';
-import { validate } from '../middlewares/validateMiddleware.js';
-import { createBookingValidation } from '../validators/bookingValidator.js';
-import { mongoIdParam } from '../validators/commonValidator.js';
+// routes/bookingRoutes.js
+// Routes pour les réservations.
+// Toutes les routes nécessitent une authentification.
 
+const express = require('express');
 const router = express.Router();
 
-router.use(protect);
+const {
+  createBooking,
+  getMyBookings,
+  getBookingById,
+  cancelBooking,
+  getAllBookings
+} = require('../controllers/bookingController');
 
-router.post(
-  '/',
-  createBookingValidation,
-  validate,
-  createBooking
-);
+const auth = require('../middlewares/auth');
+const role = require('../middlewares/role');
+const { bookingRules, mongoIdParam } = require('../middlewares/validator');
 
+// Toutes les routes sont protégées
+router.use(auth);
+
+// Routes utilisateur
+router.post('/', bookingRules, createBooking);
 router.get('/my', getMyBookings);
+router.get('/:id', mongoIdParam, getBookingById);
+router.delete('/:id', mongoIdParam, cancelBooking);
 
+// Routes admin
 router.get('/admin/all', role('admin'), getAllBookings);
-
-router.get('/:id', mongoIdParam, validate, getBookingById);
-
-router.put('/:id/cancel', mongoIdParam, validate, cancelBooking);
-
-export default router;
+// export router 
+module.exports = router;
