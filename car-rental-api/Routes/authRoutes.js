@@ -1,16 +1,18 @@
-import express from 'express';
-import { register, login, getMe } from '../controllers/authController.js';
-import { protect } from '../middlewares/authMiddleware.js';
-import { validate } from '../middlewares/validateMiddleware.js';
-import {
-  registerValidation,
-  loginValidation
-} from '../validators/authValidator.js';
+// routes/authRoutes.js
+// Routes d'authentification : inscription, connexion, profil.
 
+const express = require('express');
 const router = express.Router();
 
-router.post('/register', registerValidation, validate, register);
-router.post('/login', loginValidation, validate, login);
-router.get('/me', protect, getMe);
+const { register, login, getMe } = require('../controllers/authController');
+const auth = require('../middlewares/auth');
+const { registerRules, loginRules } = require('../middlewares/validator');
 
-export default router;
+// Routes publiques
+router.post('/register', registerRules, register);
+router.post('/login', loginRules, login);
+
+// Route protégée
+router.get('/me', auth, getMe);
+
+module.exports = router;
