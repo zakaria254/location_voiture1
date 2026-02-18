@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #00f5ff;
+  --color-accent: #7b2fff;
+}
+
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  background: #0a0a0a;
+  color: #fff;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glow-primary {
+  box-shadow: 0 0 30px rgba(0, 245, 255, 0.4);
+}
+
+.animated-gradient {
+  background: linear-gradient(90deg, #0a0a0a, #1a1a2e, #0a0a0a);
+  background-size: 200% 100%;
+  animation: gradient 15s linear infinite;
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}

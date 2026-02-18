@@ -126,7 +126,7 @@ const getMyBookings = async (req, res, next) => {
     next(error);
   }
 };
- 
+
 // ========================
 // OBTENIR UNE RÉSERVATION PAR ID
 // ========================
