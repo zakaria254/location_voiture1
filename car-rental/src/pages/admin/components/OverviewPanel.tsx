@@ -42,9 +42,9 @@ export default function OverviewPanel({
               <article key={car._id} className="rounded-xl border border-white/10 bg-zinc-800/70 p-3">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
-                    {car.image ? (
+                    {(car.images?.[0] || car.image) ? (
                       <img
-                        src={car.image}
+                        src={car.images?.[0] || car.image}
                         alt={`${car.marque} ${car.modele}`}
                         className="h-16 w-16 rounded-lg object-cover"
                       />

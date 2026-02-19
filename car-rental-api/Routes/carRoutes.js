@@ -11,7 +11,8 @@ const {
   getCarById,
   createCar,
   updateCar,
-  deleteCar
+  deleteCar,
+  getDeletedCarsArchive
 } = require('../controllers/carController');
 
 const auth = require('../middlewares/auth');
@@ -28,6 +29,7 @@ router.get('/reserved-ids', getReservedCarIds);
 router.get('/:id', mongoIdParam, getCarById);
 
 // Routes admin uniquement
+router.get('/admin/archives/deleted', auth, role('admin'), getDeletedCarsArchive);
 router.post('/', auth, role('admin'), carRules, createCar);
 router.put('/:id', auth, role('admin'), mongoIdParam, carUpdateRules, updateCar);
 router.delete('/:id', auth, role('admin'), mongoIdParam, deleteCar);

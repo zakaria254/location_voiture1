@@ -1,4 +1,5 @@
 import { Ban } from "lucide-react";
+import { Link } from "react-router-dom";
 import { formatDate } from "../utils";
 import type { BookingFilter, BookingItem } from "../types";
 
@@ -20,6 +21,7 @@ type BookingsPanelProps = {
   onBookingDateFromChange: (value: string) => void;
   onBookingDateToChange: (value: string) => void;
   onCancelBooking: (id: string) => void;
+  onDeleteBookingPermanently: (id: string) => void;
   onUpdateBookingStatus: (id: string, status: BookingItem["statut"]) => void;
 };
 
@@ -41,6 +43,7 @@ export default function BookingsPanel({
   onBookingDateFromChange,
   onBookingDateToChange,
   onCancelBooking,
+  onDeleteBookingPermanently,
   onUpdateBookingStatus,
 }: BookingsPanelProps) {
   return (
@@ -121,6 +124,12 @@ export default function BookingsPanel({
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      to={`/bookings/${booking._id}`}
+                      className="rounded-lg border border-blue-400/50 px-3 py-1.5 text-sm text-blue-200 hover:bg-blue-500/15"
+                    >
+                      View details
+                    </Link>
                     <span className="rounded-full border border-white/15 px-3 py-1 text-xs uppercase tracking-wide text-zinc-300">
                       {booking.statut}
                     </span>
@@ -143,6 +152,15 @@ export default function BookingsPanel({
                     >
                       <Ban className="h-4 w-4" /> Cancel booking
                     </button>
+                    {booking.statut === "annulee" && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteBookingPermanently(booking._id)}
+                        className="rounded-lg border border-rose-500/50 px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-500/15"
+                      >
+                        Delete permanently
+                      </button>
+                    )}
                   </div>
                 </div>
               </article>

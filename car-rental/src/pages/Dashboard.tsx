@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Ban, CalendarDays, CarFront, CircleDollarSign, RefreshCw } from "lucide-react";
+import { Link } from "react-router-dom";
 import api from "../api/axiosInstance";
 import { formatDate, showApiError } from "./admin/utils";
 import type { BookingItem } from "./admin/types";
@@ -64,6 +65,16 @@ export default function Dashboard() {
       );
     } catch (error) {
       showApiError(error, "Unable to cancel this booking.");
+    }
+  };
+
+  const handleDeleteBookingPermanently = async (bookingId: string) => {
+    if (!window.confirm("Delete this cancelled booking permanently?")) return;
+    try {
+      await api.delete(`/bookings/${bookingId}/permanent`);
+      setBookings((prev) => prev.filter((item) => item._id !== bookingId));
+    } catch (error) {
+      showApiError(error, "Unable to delete this booking.");
     }
   };
 
@@ -207,6 +218,12 @@ export default function Dashboard() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        to={`/bookings/${booking._id}`}
+                        className="rounded-lg border border-blue-400/50 px-3 py-1.5 text-sm text-blue-200 hover:bg-blue-500/15"
+                      >
+                        View details
+                      </Link>
                       <span
                         className={`rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide ${
                           statusColorClass[statusMeta.color]
@@ -223,6 +240,15 @@ export default function Dashboard() {
                         <Ban className="h-4 w-4" />
                         Cancel
                       </button>
+                      {booking.statut === "annulee" && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteBookingPermanently(booking._id)}
+                          className="rounded-lg border border-rose-500/50 px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-500/15"
+                        >
+                          Delete permanently
+                        </button>
+                      )}
                     </div>
                   </div>
                 </article>

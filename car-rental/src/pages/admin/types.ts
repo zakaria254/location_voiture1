@@ -4,6 +4,7 @@ export type CarItem = {
   modele: string;
   prixParJour: number;
   image?: string;
+  images?: string[];
   annee?: number;
   description?: string;
   disponible: boolean;
@@ -25,7 +26,18 @@ export type BookingItem = {
   dateOfBirth?: string;
   acceptTerms?: boolean;
   userId?: { name?: string; email?: string };
-  carId?: { marque?: string; modele?: string; prixParJour?: number };
+  carId?: {
+    _id?: string;
+    marque?: string;
+    modele?: string;
+    prixParJour?: number;
+    image?: string;
+    images?: string[];
+    annee?: number;
+    description?: string;
+    disponible?: boolean;
+    createdAt?: string;
+  };
 };
 
 export type CarForm = {
@@ -34,13 +46,26 @@ export type CarForm = {
   prixParJour: string;
   annee: string;
   image: string;
+  images: string[];
   description: string;
   disponible: boolean;
 };
 
-export type TabKey = "overview" | "cars" | "bookings" | "insights";
+export type TabKey = "overview" | "cars" | "bookings" | "insights" | "archives";
 
 export type BookingFilter = "all" | BookingItem["statut"];
+
+export type DeletedBookingRecord = {
+  _id: string;
+  createdAt: string;
+  booking: BookingItem;
+};
+
+export type DeletedCarRecord = {
+  _id: string;
+  createdAt: string;
+  car: CarItem;
+};
 
 export const bookingStatuses: BookingFilter[] = [
   "all",
@@ -65,6 +90,7 @@ export const initialCarForm: CarForm = {
   prixParJour: "",
   annee: "",
   image: "",
+  images: [],
   description: "",
   disponible: true,
 };

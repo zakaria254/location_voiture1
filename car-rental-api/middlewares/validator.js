@@ -104,6 +104,24 @@ const carRules = [
       return true;
     }),
 
+  body('images')
+    .optional()
+    .isArray({ max: 10 }).withMessage('Le champ images doit etre un tableau de 10 elements max'),
+
+  body('images.*')
+    .optional()
+    .custom((value) => {
+      const rawValue = typeof value === 'string' ? value.trim() : '';
+      const isUrl = /^https?:\/\/\S+$/i.test(rawValue);
+      const isBase64Image = /^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/.test(rawValue);
+
+      if (!isUrl && !isBase64Image) {
+        throw new Error("Chaque image doit etre une URL valide ou une image uploadee");
+      }
+
+      return true;
+    }),
+
   body('annee')
     .optional()
     .isInt({ min: 1900, max: new Date().getFullYear() + 1 })
@@ -145,6 +163,24 @@ const carUpdateRules = [
 
       if (!isUrl && !isBase64Image) {
         throw new Error("L'image doit être une URL valide ou une image uploadée");
+      }
+
+      return true;
+    }),
+
+  body('images')
+    .optional()
+    .isArray({ max: 10 }).withMessage('Le champ images doit etre un tableau de 10 elements max'),
+
+  body('images.*')
+    .optional()
+    .custom((value) => {
+      const rawValue = typeof value === 'string' ? value.trim() : '';
+      const isUrl = /^https?:\/\/\S+$/i.test(rawValue);
+      const isBase64Image = /^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/.test(rawValue);
+
+      if (!isUrl && !isBase64Image) {
+        throw new Error("Chaque image doit etre une URL valide ou une image uploadee");
       }
 
       return true;
@@ -280,6 +316,13 @@ const mongoIdParam = [
   validate
 ];
 
+const mongoCarIdParam = [
+  param('carId')
+    .isMongoId().withMessage('Identifiant voiture invalide'),
+
+  validate
+];
+
 module.exports = {
   registerRules,
   loginRules,
@@ -288,5 +331,6 @@ module.exports = {
   bookingRules,
   bookingStatusUpdateRules,
   mongoIdParam,
+  mongoCarIdParam,
   validate
 };

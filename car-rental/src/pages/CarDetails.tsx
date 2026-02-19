@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Car, CircleDollarSign, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, Calendar, Car, ChevronLeft, ChevronRight, CircleDollarSign, ShieldCheck, X } from "lucide-react";
 import api from "../api/axiosInstance";
 import { useAuth } from "../context/AuthContext";
-import type { CarItem } from "./admin/types";
+import type { BookingItem, CarItem } from "./admin/types";
 import { formatDate, showApiError } from "./admin/utils";
 import { fetchReservedCarIds } from "../utils/reservedCars";
 
@@ -17,6 +17,8 @@ export default function CarDetails() {
   const [loading, setLoading] = useState(true);
   const [imageFailed, setImageFailed] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [activeBooking, setActiveBooking] = useState<BookingItem | null>(null);
 
   const fromAdmin = searchParams.get("from") === "admin";
   const isAdminPath = location.pathname.startsWith("/admin/") || fromAdmin;
@@ -33,6 +35,7 @@ export default function CarDetails() {
         setCar(carRes.data?.data?.car ?? null);
         setReservedCarIds(ids);
         setImageFailed(false);
+        setActiveImageIndex(0);
       } catch (error) {
         showApiError(error, "Unable to load car details.");
         setCar(null);
@@ -44,21 +47,51 @@ export default function CarDetails() {
     fetchCar();
   }, [id]);
 
+  const galleryImages = useMemo(() => {
+    if (!car) return ["https://via.placeholder.com/1200x700?text=Car"];
+    const raw = Array.isArray(car.images) && car.images.length ? car.images : (car.image ? [car.image] : []);
+    const cleaned = raw.map((img) => (img || "").trim()).filter(Boolean);
+    return cleaned.length ? cleaned : ["https://via.placeholder.com/1200x700?text=Car"];
+  }, [car]);
+
   useEffect(() => {
     if (!isLightboxOpen) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setIsLightboxOpen(false);
+      if (event.key === "ArrowRight") {
+        setActiveImageIndex((prev) => (prev + 1) % galleryImages.length);
+      }
+      if (event.key === "ArrowLeft") {
+        setActiveImageIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
+      }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isLightboxOpen]);
+  }, [isLightboxOpen, galleryImages.length]);
 
-  const normalizedImage = car?.image?.trim();
-  const imageSrc = !imageFailed && normalizedImage ? normalizedImage : "https://via.placeholder.com/1200x700?text=Car";
+  const imageSrc = !imageFailed ? galleryImages[activeImageIndex] : "https://via.placeholder.com/1200x700?text=Car";
   const carAlt = car ? `${car.marque} ${car.modele}` : "Car image";
   const isReserved = car ? reservedCarIds.includes(car._id) : false;
+
+  useEffect(() => {
+    if (!car?._id || !isReserved || user?.role !== "admin") {
+      setActiveBooking(null);
+      return;
+    }
+
+    const fetchActiveBooking = async () => {
+      try {
+        const response = await api.get(`/bookings/car/${car._id}/active`);
+        setActiveBooking(response.data?.data?.booking ?? null);
+      } catch {
+        setActiveBooking(null);
+      }
+    };
+
+    fetchActiveBooking();
+  }, [car?._id, isReserved, user?.role]);
 
   return (
     <main className="min-h-screen bg-zinc-950 px-4 pb-10 pt-28 text-white md:px-6">
@@ -94,6 +127,25 @@ export default function CarDetails() {
                 onError={() => setImageFailed(true)}
               />
             </button>
+            {galleryImages.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto border-t border-white/10 bg-zinc-900/70 p-3">
+                {galleryImages.map((img, index) => (
+                  <button
+                    type="button"
+                    key={`${img.slice(0, 20)}-${index}`}
+                    onClick={() => {
+                      setActiveImageIndex(index);
+                      setImageFailed(false);
+                    }}
+                    className={`h-16 w-24 shrink-0 overflow-hidden rounded-lg border ${
+                      activeImageIndex === index ? "border-primary" : "border-white/10"
+                    }`}
+                  >
+                    <img src={img} alt={`${carAlt} ${index + 1}`} className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="space-y-6 p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -149,6 +201,20 @@ export default function CarDetails() {
                 <p className="text-sm leading-6 text-zinc-200">{car.description || "No description provided."}</p>
               </div>
 
+              {isReserved && activeBooking && (
+                <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-4">
+                  <p className="mb-2 text-sm font-semibold text-amber-200">Reserved by client</p>
+                  <div className="grid gap-2 text-sm text-zinc-200 md:grid-cols-2">
+                    <p>Full name: {activeBooking.fullName || activeBooking.userId?.name || "N/A"}</p>
+                    <p>Email: {activeBooking.email || activeBooking.userId?.email || "N/A"}</p>
+                    <p>Phone: {activeBooking.phone || "N/A"}</p>
+                    <p>Driver license: {activeBooking.driverLicenseNumber || "N/A"}</p>
+                    <p>License expiry: {formatDate(activeBooking.driverLicenseExpiry)}</p>
+                    <p>Status: {activeBooking.statut}</p>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-3">
                 <Link to="/cars" className="rounded-xl border border-white/15 px-4 py-2 text-sm hover:bg-zinc-800">
                   Browse more cars
@@ -188,6 +254,32 @@ export default function CarDetails() {
             className="max-h-[90vh] w-auto max-w-full object-contain"
             onClick={(event) => event.stopPropagation()}
           />
+          {galleryImages.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setActiveImageIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full border border-white/30 p-2 text-white hover:bg-white/10"
+                aria-label="Previous image"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setActiveImageIndex((prev) => (prev + 1) % galleryImages.length);
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full border border-white/30 p-2 text-white hover:bg-white/10"
+                aria-label="Next image"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </>
+          )}
         </div>
       )}
     </main>

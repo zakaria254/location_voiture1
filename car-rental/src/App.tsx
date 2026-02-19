@@ -9,6 +9,7 @@ import Register from "./pages/Register.tsx";
 import Cars from "./pages/Cars.tsx";
 import CarDetails from "./pages/CarDetails.tsx";
 import Booking from "./pages/Booking.tsx";
+import BookingDetails from "./pages/BookingDetails.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import AdminDashboard from "./pages/AdminDashboard.tsx";
 import ChatWidget from "./components/ChatWidget.tsx";
@@ -49,6 +50,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/bookings/:id"
+              element={
+                <ProtectedRoute>
+                  <BookingDetails />
                 </ProtectedRoute>
               }
             />

@@ -10,6 +10,7 @@ type Car = {
   modele: string;
   prixParJour: number;
   image?: string;
+  images?: string[];
   annee?: number;
   disponible?: boolean;
   description?: string;
@@ -178,7 +179,7 @@ export default function Cars() {
                 {filteredCars.map((car) => (
               <article key={car._id} className="rounded-2xl border border-white/10 bg-zinc-900/70 overflow-hidden">
                 <img
-                  src={car.image || "https://via.placeholder.com/800x500?text=Car"}
+                  src={car.images?.[0] || car.image || "https://via.placeholder.com/800x500?text=Car"}
                   alt={`${car.marque} ${car.modele}`}
                   className="h-48 w-full object-cover"
                 />

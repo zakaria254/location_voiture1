@@ -4,13 +4,14 @@ import toast from "react-hot-toast";
 import api from "../api/axiosInstance";
 import AdminHeader from "./admin/components/AdminHeader";
 import AdminSidebar from "./admin/components/AdminSidebar";
+import ArchivesPanel from "./admin/components/ArchivesPanel";
 import BookingsPanel from "./admin/components/BookingsPanel";
 import CarsPanel from "./admin/components/CarsPanel";
 import InsightsPanel from "./admin/components/InsightsPanel";
 import OverviewPanel from "./admin/components/OverviewPanel";
 import StatsCards from "./admin/components/StatsCards";
 import { bookingStatuses, editableBookingStatuses, initialCarForm } from "./admin/types";
-import type { BookingFilter, BookingItem, CarForm, CarItem, TabKey } from "./admin/types";
+import type { BookingFilter, BookingItem, CarForm, CarItem, DeletedBookingRecord, DeletedCarRecord, TabKey } from "./admin/types";
 import { fileToDataUrl, showApiError } from "./admin/utils";
 import { fetchReservedCarIds } from "../utils/reservedCars";
 
@@ -33,6 +34,9 @@ export default function AdminDashboard() {
   const [pendingBookingsCount, setPendingBookingsCount] = useState(0);
   const [confirmedBookingsCount, setConfirmedBookingsCount] = useState(0);
   const [inProgressBookingsCount, setInProgressBookingsCount] = useState(0);
+  const [archivesLoading, setArchivesLoading] = useState(false);
+  const [deletedCars, setDeletedCars] = useState<DeletedCarRecord[]>([]);
+  const [deletedBookings, setDeletedBookings] = useState<DeletedBookingRecord[]>([]);
 
   const [carForm, setCarForm] = useState<CarForm>(initialCarForm);
   const [editingCarId, setEditingCarId] = useState<string | null>(null);
@@ -108,9 +112,26 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchArchives = async () => {
+    setArchivesLoading(true);
+    try {
+      const [carsRes, bookingsRes] = await Promise.all([
+        api.get("/cars/admin/archives/deleted?limit=30"),
+        api.get("/bookings/admin/archives/deleted?limit=30"),
+      ]);
+      setDeletedCars(carsRes.data?.data?.records ?? []);
+      setDeletedBookings(bookingsRes.data?.data?.records ?? []);
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setArchivesLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchCars(1);
     fetchBookings("all");
+    fetchArchives();
   }, []);
 
   useEffect(() => {
@@ -199,12 +220,16 @@ export default function AdminDashboard() {
   const handleEditCar = (car: CarItem) => {
     setActiveTab("cars");
     setEditingCarId(car._id);
+    const existingImages = Array.isArray(car.images) && car.images.length
+      ? car.images
+      : (car.image ? [car.image] : []);
     setCarForm({
       marque: car.marque || "",
       modele: car.modele || "",
       prixParJour: String(car.prixParJour ?? ""),
       annee: car.annee ? String(car.annee) : "",
-      image: car.image || "",
+      image: existingImages[0] || "",
+      images: existingImages,
       description: car.description || "",
       disponible: car.disponible,
     });
@@ -213,36 +238,46 @@ export default function AdminDashboard() {
   };
 
   const handleImageFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
-
-    if (!selectedFile.type.startsWith("image/")) {
-      const message = "Please select a valid image file.";
-      setCarFormErrors([message]);
-      toast.error(message);
-      e.target.value = "";
-      return;
-    }
+    const selectedFiles = Array.from(e.target.files || []);
+    if (!selectedFiles.length) return;
 
     const maxSizeMb = 3;
-    if (selectedFile.size > maxSizeMb * 1024 * 1024) {
-      const message = `Image too large. Maximum allowed size is ${maxSizeMb}MB.`;
-      setCarFormErrors([message]);
-      toast.error(message);
-      e.target.value = "";
-      return;
+    const maxImages = 10;
+    for (const file of selectedFiles) {
+      if (!file.type.startsWith("image/")) {
+        const message = "Please select valid image files only.";
+        setCarFormErrors([message]);
+        toast.error(message);
+        e.target.value = "";
+        return;
+      }
+      if (file.size > maxSizeMb * 1024 * 1024) {
+        const message = `One image is too large. Maximum allowed size is ${maxSizeMb}MB.`;
+        setCarFormErrors([message]);
+        toast.error(message);
+        e.target.value = "";
+        return;
+      }
     }
 
     try {
-      const dataUrl = await fileToDataUrl(selectedFile);
-      setCarForm((prev) => ({ ...prev, image: dataUrl }));
+      const dataUrls = await Promise.all(selectedFiles.map((file) => fileToDataUrl(file)));
+      setCarForm((prev) => {
+        const merged = [...prev.images, ...dataUrls].slice(0, maxImages);
+        if (merged.length < prev.images.length + dataUrls.length) {
+          toast.error(`Maximum ${maxImages} images are allowed.`);
+        }
+        return { ...prev, images: merged, image: merged[0] || "" };
+      });
       setCarFormErrors([]);
-      toast.success("Image uploaded");
+      toast.success("Images uploaded");
     } catch (error) {
       const parsed = showApiError(error, "Unable to process selected image.");
       setCarFormErrors(parsed.details.length ? parsed.details : [parsed.message]);
       e.target.value = "";
+      return;
     }
+    e.target.value = "";
   };
 
   const handleSubmitCar = async (e: FormEvent) => {
@@ -254,7 +289,8 @@ export default function AdminDashboard() {
       marque: carForm.marque.trim(),
       modele: carForm.modele.trim(),
       prixParJour: Number(carForm.prixParJour),
-      image: carForm.image.trim() || undefined,
+      image: carForm.images[0]?.trim() || carForm.image.trim() || undefined,
+      images: carForm.images.map((img) => img.trim()).filter(Boolean),
       annee: carForm.annee ? Number(carForm.annee) : undefined,
       description: carForm.description.trim() || undefined,
       disponible: carForm.disponible,
@@ -285,6 +321,7 @@ export default function AdminDashboard() {
       await api.delete(`/cars/${carId}`);
       toast.success("Car deleted");
       fetchCars(carsPage);
+      fetchArchives();
     } catch (error) {
       showApiError(error);
     }
@@ -314,9 +351,22 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDeleteBookingPermanently = async (bookingId: string) => {
+    if (!window.confirm("Delete this cancelled booking permanently?")) return;
+    try {
+      await api.delete(`/bookings/${bookingId}/permanent`);
+      toast.success("Booking deleted permanently");
+      fetchBookings(bookingFilter);
+      fetchArchives();
+    } catch (error) {
+      showApiError(error);
+    }
+  };
+
   const refreshAll = () => {
     fetchCars(carsPage);
     fetchBookings(bookingFilter);
+    fetchArchives();
   };
 
   return (
@@ -368,7 +418,7 @@ export default function AdminDashboard() {
               onCarFormChange={setCarForm}
               onImageFileChange={handleImageFileChange}
               onClearImage={() => {
-                setCarForm((prev) => ({ ...prev, image: "" }));
+                setCarForm((prev) => ({ ...prev, image: "", images: [] }));
                 if (imageInputRef.current) imageInputRef.current.value = "";
               }}
               onSubmitCar={handleSubmitCar}
@@ -409,11 +459,15 @@ export default function AdminDashboard() {
               onBookingDateFromChange={setBookingDateFrom}
               onBookingDateToChange={setBookingDateTo}
               onCancelBooking={handleCancelBooking}
+              onDeleteBookingPermanently={handleDeleteBookingPermanently}
               onUpdateBookingStatus={handleUpdateBookingStatus}
             />
           )}
 
           {activeTab === "insights" && <InsightsPanel />}
+          {activeTab === "archives" && (
+            <ArchivesPanel loading={archivesLoading} deletedCars={deletedCars} deletedBookings={deletedBookings} />
+          )}
         </section>
       </div>
     </main>

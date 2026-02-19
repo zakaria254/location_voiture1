@@ -33,7 +33,7 @@ export default function Landing() {
             <ArrowRight className="group-hover:translate-x-2 transition" />
           </Link>
           <Link
-            to="/login"
+            to="/cars"
             className="px-10 py-6 border border-white/30 rounded-2xl font-semibold flex items-center gap-3 hover:bg-white/10 transition text-lg"
           >
             <Play className="w-5 h-5" /> Watch the film

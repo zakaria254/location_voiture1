@@ -194,7 +194,7 @@ export default function Booking() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 className="w-full rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 outline-none focus:border-primary"
-                required
+                
               />
             </label>
 
@@ -205,7 +205,7 @@ export default function Booking() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 outline-none focus:border-primary"
-                required
+                
               />
             </label>
 
