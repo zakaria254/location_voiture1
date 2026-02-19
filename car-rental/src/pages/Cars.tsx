@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axiosInstance";
+import { useAuth } from "../context/AuthContext";
 
 type Car = {
   _id: string;
@@ -13,6 +14,7 @@ type Car = {
 };
 
 export default function Cars() {
+  const { user } = useAuth();
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -54,15 +56,34 @@ export default function Cars() {
                   className="h-48 w-full object-cover"
                 />
                 <div className="p-5">
-                  <h2 className="text-xl font-semibold">{car.marque} {car.modele}</h2>
-                  <p className="text-zinc-400 mt-1">{car.annee || "N/A"} · {car.disponible ? "Available" : "Unavailable"}</p>
+                  <h2 className="text-xl font-semibold">
+                    {car.marque} {car.modele}
+                  </h2>
+                  <p className="text-zinc-400 mt-1">
+                    {car.annee || "N/A"} | {car.disponible ? "Available" : "Unavailable"}
+                  </p>
                   <p className="text-primary font-bold mt-4">${car.prixParJour}/day</p>
-                  <Link
-                    to={`/cars/${car._id}`}
-                    className="inline-block mt-4 px-4 py-2 rounded-xl bg-white text-black font-medium hover:bg-zinc-200 transition"
-                  >
-                    View details
-                  </Link>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Link
+                      to={`/cars/${car._id}`}
+                      className="inline-block px-4 py-2 rounded-xl bg-white text-black font-medium hover:bg-zinc-200 transition"
+                    >
+                      View details
+                    </Link>
+                    {car.disponible ? (
+                      <Link
+                        to={user ? `/booking/${car._id}` : "/login"}
+                        className="inline-block px-4 py-2 rounded-xl bg-primary/90 text-zinc-950 font-semibold hover:bg-primary transition"
+                      >
+                        {user ? "Book now" : "Login to book"}
+                      </Link>
+                    ) : (
+                      <span className="inline-block px-4 py-2 rounded-xl border border-red-400/40 text-red-300 text-sm">
+                        Unavailable
+                      </span>
+                    )}
+                  </div>
                 </div>
               </article>
             ))}

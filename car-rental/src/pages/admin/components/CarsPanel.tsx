@@ -82,7 +82,7 @@ export default function CarsPanel({
           <div className="space-y-3">
             {cars.map((car) => (
               <article key={car._id} className="rounded-xl border border-white/10 bg-zinc-800/70 p-3">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center ">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center">
                   <div>
                     {car.image ? (
                       <img
@@ -103,9 +103,9 @@ export default function CarsPanel({
                       {car.disponible ? "Available" : "Unavailable"}
                     </p>
                   </div>
-                  <div className="flex gap-2 md:justify-between md:ml-auto">
+                  <div className="flex gap-2 md:ml-auto md:justify-between">
                     <Link
-                      to={`/admin/cars/${car._id}`}
+                      to={`/cars/${car._id}?from=admin`}
                       className="inline-flex items-center gap-1 rounded-lg border border-blue-400/50 px-3 py-1.5 text-sm text-blue-200 hover:bg-blue-500/15"
                     >
                       <Eye className="h-4 w-4" /> View

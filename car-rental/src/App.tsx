@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import type { ReactNode } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext.tsx";
@@ -11,7 +11,10 @@ import CarDetails from "./pages/CarDetails.tsx";
 import Booking from "./pages/Booking.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import AdminDashboard from "./pages/AdminDashboard.tsx";
-import AdminCarDetails from "./pages/admin/components/AdminCarDetails.tsx";
+function AdminCarDetailsRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={id ? `/cars/${id}?from=admin` : "/cars"} replace />;
+}
 
 function ProtectedRoute({ children, adminOnly = false }: { children: ReactNode; adminOnly?: boolean }) {
   const { user } = useAuth();
@@ -60,7 +63,7 @@ function App() {
               path="/admin/cars/:id"
               element={
                 <ProtectedRoute adminOnly>
-                  <AdminCarDetails />
+                  <AdminCarDetailsRedirect />
                 </ProtectedRoute>
               }
             />
