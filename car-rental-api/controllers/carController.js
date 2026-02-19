@@ -4,6 +4,7 @@
 
 const Car = require('../models/Car');
 const Booking = require('../models/Booking');
+const Review = require('../models/Review');
 const DeletedCar = require('../models/DeletedCar');
 const ApiError = require('../utils/ApiError');
 
@@ -73,11 +74,31 @@ const getAllCars = async (req, res, next) => {
     ]);
 
     const normalizedCars = cars.map(normalizeCarImages);
+    let carsWithUserRating = normalizedCars;
+
+    if (req.user?._id && normalizedCars.length > 0) {
+      const carIds = normalizedCars.map((car) => car._id);
+      const userReviews = await Review.find({
+        user: req.user._id,
+        car: { $in: carIds }
+      })
+        .select('car rating')
+        .lean();
+
+      const ratingByCarId = new Map(
+        userReviews.map((item) => [String(item.car), item.rating])
+      );
+
+      carsWithUserRating = normalizedCars.map((car) => ({
+        ...car,
+        userRating: ratingByCarId.get(String(car._id)) ?? null
+      }));
+    }
 
     res.status(200).json({
       success: true,
       data: {
-        cars: normalizedCars,
+        cars: carsWithUserRating,
         pagination: {
           total,
           page: pageNum,
@@ -105,9 +126,16 @@ const getCarById = async (req, res, next) => {
       throw ApiError.notFound('Voiture introuvable');
     }
 
+    let userRating = null;
+
+    if (req.user?._id) {
+      const review = await Review.findOne({ car: car._id, user: req.user._id }).lean();
+      userRating = review?.rating ?? null;
+    }
+
     res.status(200).json({
       success: true,
-      data: { car: normalizeCarImages(car) }
+      data: { car: { ...normalizeCarImages(car), userRating } }
     });
   } catch (error) {
     next(error);

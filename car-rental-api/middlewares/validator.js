@@ -189,6 +189,14 @@ const carUpdateRules = [
   validate
 ];
 
+const ratingRules = [
+  body('rating')
+    .notEmpty().withMessage('La note est obligatoire')
+    .isInt({ min: 1, max: 5 }).withMessage('La note doit être comprise entre 1 et 5'),
+
+  validate
+];
+
 // ========================
 // RÈGLES : RÉSERVATIONS
 // ========================
@@ -328,6 +336,7 @@ module.exports = {
   loginRules,
   carRules,
   carUpdateRules,
+  ratingRules,
   bookingRules,
   bookingStatusUpdateRules,
   mongoIdParam,

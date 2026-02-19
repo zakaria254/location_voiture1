@@ -7,6 +7,9 @@ export type CarItem = {
   images?: string[];
   annee?: number;
   description?: string;
+  averageRating?: number;
+  totalRatings?: number;
+  userRating?: number | null;
   disponible: boolean;
   createdAt?: string;
 };

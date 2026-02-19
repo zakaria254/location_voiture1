@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../api/axiosInstance";
 import { useAuth } from "../context/AuthContext";
 import { fetchReservedCarIds } from "../utils/reservedCars";
+import CarRating from "../components/CarRating";
 
 type Car = {
   _id: string;
@@ -14,6 +15,9 @@ type Car = {
   annee?: number;
   disponible?: boolean;
   description?: string;
+  averageRating?: number;
+  totalRatings?: number;
+  userRating?: number | null;
 };
 
 export default function Cars() {
@@ -198,6 +202,26 @@ export default function Cars() {
                     {car.annee || "N/A"} | {car.disponible ? "Available" : "Unavailable"}
                   </p>
                   <p className="text-primary font-bold mt-4">${car.prixParJour}/day</p>
+
+                  <div className="mt-4">
+                    <CarRating
+                      carId={car._id}
+                      initialAverageRating={Number(car.averageRating ?? 0)}
+                      initialTotalRatings={Number(car.totalRatings ?? 0)}
+                      initialUserRating={car.userRating ?? null}
+                      isLoggedIn={Boolean(user)}
+                      canRate={Boolean(user)}
+                      onRated={({ averageRating, totalRatings, userRating }) => {
+                        setCars((prev) =>
+                          prev.map((item) =>
+                            item._id === car._id
+                              ? { ...item, averageRating, totalRatings, userRating }
+                              : item
+                          )
+                        );
+                      }}
+                    />
+                  </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Link

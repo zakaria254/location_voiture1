@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import type { BookingItem, CarItem } from "./admin/types";
 import { formatDate, showApiError } from "./admin/utils";
 import { fetchReservedCarIds } from "../utils/reservedCars";
+import CarRating from "../components/CarRating";
 
 export default function CarDetails() {
   const { id } = useParams<{ id: string }>();
@@ -192,6 +193,22 @@ export default function CarDetails() {
                   <p className="text-lg font-semibold">{formatDate(car.createdAt)}</p>
                 </div>
               </div>
+
+              <CarRating
+                carId={car._id}
+                initialAverageRating={Number(car.averageRating ?? 0)}
+                initialTotalRatings={Number(car.totalRatings ?? 0)}
+                initialUserRating={car.userRating ?? null}
+                isLoggedIn={Boolean(user)}
+                canRate={Boolean(user)}
+                onRated={({ averageRating, totalRatings, userRating }) => {
+                  setCar((prev) => (
+                    prev
+                      ? { ...prev, averageRating, totalRatings, userRating }
+                      : prev
+                  ));
+                }}
+              />
 
               <div className="rounded-xl border border-white/10 bg-zinc-800/70 p-4">
                 <p className="mb-2 inline-flex items-center gap-2 text-zinc-400">
