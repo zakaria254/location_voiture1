@@ -17,6 +17,13 @@ export type BookingItem = {
   dateDebut: string;
   dateFin: string;
   createdAt: string;
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  driverLicenseNumber?: string;
+  driverLicenseExpiry?: string;
+  dateOfBirth?: string;
+  acceptTerms?: boolean;
   userId?: { name?: string; email?: string };
   carId?: { marque?: string; modele?: string; prixParJour?: number };
 };

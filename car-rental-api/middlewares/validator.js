@@ -4,6 +4,7 @@
 
 const { body, param, validationResult } = require('express-validator');
 const ApiError = require('../utils/ApiError');
+const MINIMUM_DRIVER_AGE = 21;
 
 // ========================
 // MIDDLEWARE DE RÉSULTAT
@@ -191,6 +192,70 @@ const bookingRules = [
       }
       return true;
     }),
+
+  body('fullName')
+    .trim()
+    .notEmpty().withMessage('Le nom complet est obligatoire')
+    .isLength({ min: 2, max: 100 }).withMessage('Le nom complet doit contenir entre 2 et 100 caractères'),
+
+  body('email')
+    .trim()
+    .notEmpty().withMessage("L'email est obligatoire")
+    .isEmail().withMessage("Format d'email invalide")
+    .normalizeEmail(),
+
+  body('phone')
+    .trim()
+    .notEmpty().withMessage('Le numéro de téléphone est obligatoire')
+    .matches(/^[+0-9()\s-]{8,20}$/).withMessage('Le numéro de téléphone est invalide'),
+
+  body('driverLicenseNumber')
+    .trim()
+    .notEmpty().withMessage('Le numéro de permis est obligatoire')
+    .isLength({ min: 5, max: 40 }).withMessage('Le numéro de permis doit contenir entre 5 et 40 caractères'),
+
+  body('driverLicenseExpiry')
+    .notEmpty().withMessage("La date d'expiration du permis est obligatoire")
+    .isISO8601().withMessage("La date d'expiration du permis doit être au format ISO 8601 (YYYY-MM-DD)")
+    .custom((value, { req }) => {
+      const expiry = new Date(value);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dateFin = new Date(req.body.dateFin);
+
+      if (expiry <= today) {
+        throw new Error("Le permis de conduire est expiré");
+      }
+
+      if (expiry <= dateFin) {
+        throw new Error("Le permis doit être valide pendant toute la durée de location");
+      }
+
+      return true;
+    }),
+
+  body('dateOfBirth')
+    .notEmpty().withMessage('La date de naissance est obligatoire')
+    .isISO8601().withMessage('La date de naissance doit être au format ISO 8601 (YYYY-MM-DD)')
+    .custom((value) => {
+      const birth = new Date(value);
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+      }
+
+      if (age < MINIMUM_DRIVER_AGE) {
+        throw new Error(`Age minimum requis: ${MINIMUM_DRIVER_AGE} ans`);
+      }
+
+      return true;
+    }),
+
+  body('acceptTerms')
+    .custom((value) => value === true)
+    .withMessage("Vous devez accepter les conditions de location"),
 
   validate
 ];

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { CalendarDays, CircleDollarSign } from "lucide-react";
 import api from "../api/axiosInstance";
+import { useAuth } from "../context/AuthContext";
 import type { CarItem } from "./admin/types";
 import { showApiError } from "./admin/utils";
 
@@ -19,9 +20,24 @@ function addDays(base: Date, days: number) {
   return next;
 }
 
+function getAgeFromBirthDate(dateOfBirth: string) {
+  if (!dateOfBirth) return 0;
+  const birth = new Date(dateOfBirth);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+const MINIMUM_DRIVER_AGE = 21;
+
 export default function Booking() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const today = useMemo(() => {
     const now = new Date();
@@ -34,6 +50,19 @@ export default function Booking() {
   const [submitting, setSubmitting] = useState(false);
   const [dateDebut, setDateDebut] = useState(toDateInputValue(today));
   const [dateFin, setDateFin] = useState(toDateInputValue(addDays(today, 1)));
+  const [fullName, setFullName] = useState(user?.name || "");
+  const [email, setEmail] = useState(user?.email || "");
+  const [phone, setPhone] = useState("");
+  const [driverLicenseNumber, setDriverLicenseNumber] = useState("");
+  const [driverLicenseExpiry, setDriverLicenseExpiry] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    if (!fullName) setFullName(user.name || "");
+    if (!email) setEmail(user.email || "");
+  }, [user, fullName, email]);
 
   useEffect(() => {
     if (!id) return;
@@ -69,6 +98,8 @@ export default function Booking() {
 
   const minStart = toDateInputValue(today);
   const minEnd = toDateInputValue(addDays(new Date(dateDebut), 1));
+  const minimumLicenseExpiry = toDateInputValue(addDays(new Date(dateFin), 1));
+  const driverAge = useMemo(() => getAgeFromBirthDate(dateOfBirth), [dateOfBirth]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -79,12 +110,34 @@ export default function Booking() {
       return;
     }
 
+    if (driverAge < MINIMUM_DRIVER_AGE) {
+      toast.error(`Minimum age is ${MINIMUM_DRIVER_AGE} years.`);
+      return;
+    }
+
+    if (!acceptTerms) {
+      toast.error("You must agree to rental terms.");
+      return;
+    }
+
+    if (!driverLicenseExpiry || new Date(driverLicenseExpiry) <= new Date(dateFin)) {
+      toast.error("Driving license must remain valid for the full rental period.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       await api.post("/bookings", {
         carId: id,
         dateDebut,
         dateFin,
+        fullName: fullName.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        driverLicenseNumber: driverLicenseNumber.trim(),
+        driverLicenseExpiry,
+        dateOfBirth,
+        acceptTerms,
       });
 
       toast.success("Booking created successfully.");
@@ -135,6 +188,77 @@ export default function Booking() {
 
           <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
             <label className="block text-sm">
+              <span className="mb-1 block text-zinc-300">Full Name</span>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 outline-none focus:border-primary"
+                required
+              />
+            </label>
+
+            <label className="block text-sm">
+              <span className="mb-1 block text-zinc-300">Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 outline-none focus:border-primary"
+                required
+              />
+            </label>
+
+            <label className="block text-sm">
+              <span className="mb-1 block text-zinc-300">Phone</span>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 outline-none focus:border-primary"
+                placeholder="+212..."
+                
+              />
+            </label>
+
+            <label className="block text-sm">
+              <span className="mb-1 block text-zinc-300">Driver License Number</span>
+              <input
+                type="text"
+                value={driverLicenseNumber}
+                onChange={(e) => setDriverLicenseNumber(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 outline-none focus:border-primary"
+                
+              />
+            </label>
+
+            <label className="block text-sm">
+              <span className="mb-1 block text-zinc-300">Driving license expiry date</span>
+              <input
+                type="date"
+                value={driverLicenseExpiry}
+                min={minimumLicenseExpiry}
+                onChange={(e) => setDriverLicenseExpiry(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 outline-none focus:border-primary"
+                
+              />
+            </label>
+
+            <label className="block text-sm">
+              <span className="mb-1 block text-zinc-300">Date of birth</span>
+              <input
+                type="date"
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 outline-none focus:border-primary"
+                
+              />
+              <span className="mt-1 block text-xs text-zinc-400">
+                Minimum age: {MINIMUM_DRIVER_AGE} years. Current: {driverAge || 0} years.
+              </span>
+            </label>
+
+            <label className="block text-sm">
               <span className="mb-1 block text-zinc-300">Start date</span>
               <input
                 type="date"
@@ -142,7 +266,7 @@ export default function Booking() {
                 min={minStart}
                 onChange={(e) => setDateDebut(e.target.value)}
                 className="w-full rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 outline-none focus:border-primary"
-                required
+                
               />
             </label>
 
@@ -154,7 +278,7 @@ export default function Booking() {
                 min={minEnd}
                 onChange={(e) => setDateFin(e.target.value)}
                 className="w-full rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 outline-none focus:border-primary"
-                required
+                
               />
             </label>
 
@@ -167,6 +291,16 @@ export default function Booking() {
                 Total: <span className="font-semibold text-primary">{total} MAD</span>
               </p>
             </div>
+
+            <label className="flex items-center gap-2 text-sm text-zinc-300">
+              <input
+                type="checkbox"
+                checked={acceptTerms}
+                onChange={(e) => setAcceptTerms(e.target.checked)}
+                
+              />
+              I agree to the rental terms
+            </label>
 
             <button
               type="submit"
