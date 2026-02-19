@@ -10,12 +10,13 @@ const {
   getMyBookings,
   getBookingById,
   cancelBooking,
-  getAllBookings
+  getAllBookings,
+  updateBookingStatus
 } = require('../controllers/bookingController');
 
 const auth = require('../middlewares/auth');
 const role = require('../middlewares/role');
-const { bookingRules, mongoIdParam } = require('../middlewares/validator');
+const { bookingRules, bookingStatusUpdateRules, mongoIdParam } = require('../middlewares/validator');
 
 // Toutes les routes sont protégées
 router.use(auth);
@@ -28,5 +29,6 @@ router.delete('/:id', mongoIdParam, cancelBooking);
 
 // Routes admin
 router.get('/admin/all', role('admin'), getAllBookings);
+router.patch('/:id/status', role('admin'), mongoIdParam, bookingStatusUpdateRules, updateBookingStatus);
 // export router 
 module.exports = router;

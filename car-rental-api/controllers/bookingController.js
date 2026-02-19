@@ -255,10 +255,56 @@ const getAllBookings = async (req, res, next) => {
   }
 };
 
+// ========================
+// METTRE A JOUR LE STATUT (ADMIN)
+// ========================
+// PATCH /api/bookings/:id/status
+const updateBookingStatus = async (req, res, next) => {
+  try {
+    const { statut } = req.body;
+
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      throw ApiError.notFound('RÃ©servation introuvable');
+    }
+
+    if (booking.statut === statut) {
+      const sameBooking = await Booking.findById(booking._id)
+        .populate('userId', 'name email')
+        .populate('carId', 'marque modele prixParJour')
+        .lean();
+
+      return res.status(200).json({
+        success: true,
+        message: 'Statut inchangÃ©',
+        data: { booking: sameBooking }
+      });
+    }
+
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      booking._id,
+      { statut },
+      { new: true, runValidators: true }
+    )
+      .populate('userId', 'name email')
+      .populate('carId', 'marque modele prixParJour')
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      message: 'Statut de rÃ©servation mis Ã  jour avec succÃ¨s',
+      data: { booking: updatedBooking }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createBooking,
   getMyBookings,
   getBookingById,
   cancelBooking,
-  getAllBookings
+  getAllBookings,
+  updateBookingStatus
 };

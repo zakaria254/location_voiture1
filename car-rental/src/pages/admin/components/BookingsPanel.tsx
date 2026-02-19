@@ -8,9 +8,11 @@ type BookingsPanelProps = {
   bookingSearch: string;
   bookingsLoading: boolean;
   filteredBookings: BookingItem[];
+  editableStatuses: BookingItem["statut"][];
   onFilterChange: (value: BookingFilter) => void;
   onSearchChange: (value: string) => void;
   onCancelBooking: (id: string) => void;
+  onUpdateBookingStatus: (id: string, status: BookingItem["statut"]) => void;
 };
 
 export default function BookingsPanel({
@@ -19,9 +21,11 @@ export default function BookingsPanel({
   bookingSearch,
   bookingsLoading,
   filteredBookings,
+  editableStatuses,
   onFilterChange,
   onSearchChange,
   onCancelBooking,
+  onUpdateBookingStatus,
 }: BookingsPanelProps) {
   return (
     <section className="rounded-2xl border border-white/10 bg-zinc-900/70 p-5">
@@ -74,6 +78,17 @@ export default function BookingsPanel({
                     <span className="rounded-full border border-white/15 px-3 py-1 text-xs uppercase tracking-wide text-zinc-300">
                       {booking.statut}
                     </span>
+                    <select
+                      value={booking.statut}
+                      onChange={(e) => onUpdateBookingStatus(booking._id, e.target.value as BookingItem["statut"])}
+                      className="rounded-lg border border-white/10 bg-zinc-900 px-2 py-1.5 text-sm outline-none"
+                    >
+                      {editableStatuses.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
                     <button
                       type="button"
                       disabled={!isCancellable}

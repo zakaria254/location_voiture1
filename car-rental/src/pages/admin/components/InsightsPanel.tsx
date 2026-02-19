@@ -4,8 +4,8 @@ export default function InsightsPanel() {
       <article className="rounded-2xl border border-white/10 bg-zinc-900/70 p-5">
         <h3 className="mb-2 font-semibold">Operational notes</h3>
         <p className="text-sm text-zinc-400">
-          Backend currently supports booking list and cancellation for admin. If you want status transitions (confirm,
-          start, finish), add dedicated endpoints in `bookingController`.
+          Admin can now manually update booking statuses (pending, confirmed, in progress, finished, cancelled) from
+          the bookings panel.
         </p>
       </article>
       <article className="rounded-2xl border border-white/10 bg-zinc-900/70 p-5">
