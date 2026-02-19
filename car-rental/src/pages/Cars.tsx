@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../api/axiosInstance";
 import { useAuth } from "../context/AuthContext";
 import { fetchReservedCarIds } from "../utils/reservedCars";
-import CarRating from "../components/CarRating";
+import { showApiError } from "./admin/utils";
 
 type Car = {
   _id: string;
@@ -34,6 +34,8 @@ export default function Cars() {
   const [maxYear, setMaxYear] = useState("");
   const [availabilityFilter, setAvailabilityFilter] = useState<"all" | "available" | "unavailable">("all");
   const [reservationFilter, setReservationFilter] = useState<"all" | "reserved" | "not_reserved">("all");
+  const [ratingSavingCarId, setRatingSavingCarId] = useState<string | null>(null);
+  const [hoveredRating, setHoveredRating] = useState<{ carId: string; value: number } | null>(null);
 
   useEffect(() => {
     Promise.all([api.get("/cars?limit=50&sort=-createdAt"), fetchReservedCarIds()])
@@ -92,6 +94,34 @@ export default function Cars() {
     reservationFilter,
     reservedCarIds,
   ]);
+
+  const handleRate = async (carId: string, value: number) => {
+    if (ratingSavingCarId) return;
+
+    if (!user) {
+      window.location.href = "/login";
+      return;
+    }
+
+    setRatingSavingCarId(carId);
+    try {
+      const response = await api.put(`/cars/${carId}/rating`, { rating: value });
+      const averageRating = Number(response.data?.data?.ratings?.averageRating ?? 0);
+      const totalRatings = Number(response.data?.data?.ratings?.totalRatings ?? 0);
+
+      setCars((prev) =>
+        prev.map((item) =>
+          item._id === carId
+            ? { ...item, averageRating, totalRatings, userRating: value }
+            : item
+        )
+      );
+    } catch (error) {
+      showApiError(error, "Unable to submit rating.");
+    } finally {
+      setRatingSavingCarId(null);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-zinc-950 pt-32 pb-16 px-6">
@@ -181,12 +211,49 @@ export default function Cars() {
             ) : (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredCars.map((car) => (
-              <article key={car._id} className="rounded-2xl border border-white/10 bg-zinc-900/70 overflow-hidden">
-                <img
-                  src={car.images?.[0] || car.image || "https://via.placeholder.com/800x500?text=Car"}
-                  alt={`${car.marque} ${car.modele}`}
-                  className="h-48 w-full object-cover"
-                />
+              <article
+                key={car._id}
+                className="group rounded-2xl border border-white/10 bg-zinc-900/70 overflow-hidden"
+              >
+                <div className="relative">
+                  <img
+                    src={car.images?.[0] || car.image || "https://via.placeholder.com/800x500?text=Car"}
+                    alt={`${car.marque} ${car.modele}`}
+                    className="h-48 w-full object-cover"
+                  />
+                  <div className="absolute left-3 top-3 rounded-full border border-white/25 bg-black/55 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
+                    ⭐ {Number(car.averageRating ?? 0).toFixed(1)}
+                    <span className="ml-1 text-zinc-300">({Number(car.totalRatings ?? 0)})</span>
+                  </div>
+
+                  <div className="absolute left-3 top-12 rounded-xl border border-white/15 bg-black/65 px-2 py-1 opacity-0 translate-y-1 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => {
+                        const preview =
+                          hoveredRating?.carId === car._id
+                            ? hoveredRating.value
+                            : Number(car.userRating ?? 0);
+
+                        return (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => handleRate(car._id, star)}
+                            onMouseEnter={() => setHoveredRating({ carId: car._id, value: star })}
+                            onMouseLeave={() => setHoveredRating(null)}
+                            disabled={ratingSavingCarId === car._id}
+                            className={`text-lg leading-none transition ${
+                              star <= preview ? "text-yellow-400" : "text-zinc-400"
+                            } hover:scale-110 disabled:opacity-60`}
+                            aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+                          >
+                            ★
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
                 <div className="p-5">
                   <div className="flex items-center gap-2">
                     <h2 className="text-xl font-semibold">
@@ -202,26 +269,6 @@ export default function Cars() {
                     {car.annee || "N/A"} | {car.disponible ? "Available" : "Unavailable"}
                   </p>
                   <p className="text-primary font-bold mt-4">${car.prixParJour}/day</p>
-
-                  <div className="mt-4">
-                    <CarRating
-                      carId={car._id}
-                      initialAverageRating={Number(car.averageRating ?? 0)}
-                      initialTotalRatings={Number(car.totalRatings ?? 0)}
-                      initialUserRating={car.userRating ?? null}
-                      isLoggedIn={Boolean(user)}
-                      canRate={Boolean(user)}
-                      onRated={({ averageRating, totalRatings, userRating }) => {
-                        setCars((prev) =>
-                          prev.map((item) =>
-                            item._id === car._id
-                              ? { ...item, averageRating, totalRatings, userRating }
-                              : item
-                          )
-                        );
-                      }}
-                    />
-                  </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Link
