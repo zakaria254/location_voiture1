@@ -96,7 +96,7 @@ userSchema.methods.generateAuthToken = function () {
 };
 
 // Index pour optimiser les recherches par email
-userSchema.index({ email: 1 });
+// userSchema.index({ email: 1 });
 
 const User = mongoose.model('User', userSchema);
 

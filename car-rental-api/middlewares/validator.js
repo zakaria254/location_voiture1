@@ -91,8 +91,17 @@ const carRules = [
 
   body('image')
     .optional()
-    .trim()
-    .isURL().withMessage("L'image doit être une URL valide"),
+    .custom((value) => {
+      const rawValue = typeof value === 'string' ? value.trim() : '';
+      const isUrl = /^https?:\/\/\S+$/i.test(rawValue);
+      const isBase64Image = /^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/.test(rawValue);
+
+      if (!isUrl && !isBase64Image) {
+        throw new Error("L'image doit être une URL valide ou une image uploadée");
+      }
+
+      return true;
+    }),
 
   body('annee')
     .optional()
@@ -128,8 +137,17 @@ const carUpdateRules = [
 
   body('image')
     .optional()
-    .trim()
-    .isURL().withMessage("L'image doit être une URL valide"),
+    .custom((value) => {
+      const rawValue = typeof value === 'string' ? value.trim() : '';
+      const isUrl = /^https?:\/\/\S+$/i.test(rawValue);
+      const isBase64Image = /^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/.test(rawValue);
+
+      if (!isUrl && !isBase64Image) {
+        throw new Error("L'image doit être une URL valide ou une image uploadée");
+      }
+
+      return true;
+    }),
 
   validate
 ];

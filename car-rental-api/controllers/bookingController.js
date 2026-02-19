@@ -147,7 +147,7 @@ const getBookingById = async (req, res, next) => {
       booking.userId._id.toString() !== req.user.id &&
       req.user.role !== 'admin'
     ) {
-      throw ApiError.forbidden('Vous ne pouvez consulter que vos propres réservations');
+      throw ApiError.forbidden('Vous ne pouvez consulter que vos propres réservations juste pour user ou admin peut consulter toutes les réservations');
     }
 
     res.status(200).json({
