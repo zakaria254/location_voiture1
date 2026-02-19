@@ -5,6 +5,7 @@ import api from "../api/axiosInstance";
 import { useAuth } from "../context/AuthContext";
 import type { CarItem } from "./admin/types";
 import { formatDate, showApiError } from "./admin/utils";
+import { fetchReservedCarIds } from "../utils/reservedCars";
 
 export default function CarDetails() {
   const { id } = useParams<{ id: string }>();
@@ -12,6 +13,7 @@ export default function CarDetails() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [car, setCar] = useState<CarItem | null>(null);
+  const [reservedCarIds, setReservedCarIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [imageFailed, setImageFailed] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -27,8 +29,9 @@ export default function CarDetails() {
     const fetchCar = async () => {
       setLoading(true);
       try {
-        const response = await api.get(`/cars/${id}`);
-        setCar(response.data?.data?.car ?? null);
+        const [carRes, ids] = await Promise.all([api.get(`/cars/${id}`), fetchReservedCarIds()]);
+        setCar(carRes.data?.data?.car ?? null);
+        setReservedCarIds(ids);
         setImageFailed(false);
       } catch (error) {
         showApiError(error, "Unable to load car details.");
@@ -55,6 +58,7 @@ export default function CarDetails() {
   const normalizedImage = car?.image?.trim();
   const imageSrc = !imageFailed && normalizedImage ? normalizedImage : "https://via.placeholder.com/1200x700?text=Car";
   const carAlt = car ? `${car.marque} ${car.modele}` : "Car image";
+  const isReserved = car ? reservedCarIds.includes(car._id) : false;
 
   return (
     <main className="min-h-screen bg-zinc-950 px-4 pb-10 pt-28 text-white md:px-6">
@@ -106,6 +110,11 @@ export default function CarDetails() {
                 >
                   {car.disponible ? "Available" : "Unavailable"}
                 </span>
+                {isReserved && (
+                  <span className="rounded-full border border-amber-400/40 bg-amber-500/15 px-3 py-1 text-sm font-medium text-amber-200">
+                    Reserved
+                  </span>
+                )}
               </div>
 
               <div className="grid gap-3 md:grid-cols-3">

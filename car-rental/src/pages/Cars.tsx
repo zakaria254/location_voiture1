@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axiosInstance";
 import { useAuth } from "../context/AuthContext";
+import { fetchReservedCarIds } from "../utils/reservedCars";
 
 type Car = {
   _id: string;
@@ -16,15 +17,16 @@ type Car = {
 export default function Cars() {
   const { user } = useAuth();
   const [cars, setCars] = useState<Car[]>([]);
+  const [reservedCarIds, setReservedCarIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api
-      .get("/cars?limit=12")
-      .then((res) => {
-        const list = res.data?.data?.cars ?? [];
+    Promise.all([api.get("/cars?limit=12"), fetchReservedCarIds()])
+      .then(([carsRes, ids]) => {
+        const list = carsRes.data?.data?.cars ?? [];
         setCars(list);
+        setReservedCarIds(ids);
       })
       .catch(() => {
         setError("Unable to load fleet right now.");
@@ -56,9 +58,16 @@ export default function Cars() {
                   className="h-48 w-full object-cover"
                 />
                 <div className="p-5">
-                  <h2 className="text-xl font-semibold">
-                    {car.marque} {car.modele}
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-semibold">
+                      {car.marque} {car.modele}
+                    </h2>
+                    {reservedCarIds.includes(car._id) && (
+                      <span className="rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-200">
+                        Reserved
+                      </span>
+                    )}
+                  </div>
                   <p className="text-zinc-400 mt-1">
                     {car.annee || "N/A"} | {car.disponible ? "Available" : "Unavailable"}
                   </p>

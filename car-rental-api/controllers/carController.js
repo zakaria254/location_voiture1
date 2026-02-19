@@ -210,8 +210,34 @@ const deleteCar = async (req, res, next) => {
   }
 };
 
+// ========================
+// OBTENIR LES IDs DES VOITURES RESERVEES
+// ========================
+// GET /api/cars/reserved-ids
+const getReservedCarIds = async (req, res, next) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const reservedCarIds = await Booking.distinct('carId', {
+      statut: { $in: ['en_attente', 'confirmee', 'en_cours'] },
+      dateFin: { $gte: today }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        reservedCarIds: reservedCarIds.map((id) => id.toString())
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllCars,
+  getReservedCarIds,
   getCarById,
   createCar,
   updateCar,

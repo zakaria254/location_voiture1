@@ -8,6 +8,7 @@ import type { CarForm, CarItem } from "../types";
 type CarsPanelProps = {
   carsLoading: boolean;
   cars: CarItem[];
+  reservedCarIds: string[];
   carsPage: number;
   carsTotalPages: number;
   onPrevPage: () => void;
@@ -29,6 +30,7 @@ type CarsPanelProps = {
 export default function CarsPanel({
   carsLoading,
   cars,
+  reservedCarIds,
   carsPage,
   carsTotalPages,
   onPrevPage,
@@ -82,7 +84,7 @@ export default function CarsPanel({
           <div className="space-y-3">
             {cars.map((car) => (
               <article key={car._id} className="rounded-xl border border-white/10 bg-zinc-800/70 p-3">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
                     {car.image ? (
                       <img
@@ -95,9 +97,16 @@ export default function CarsPanel({
                     )}
                   </div>
                   <div>
-                    <p className="font-semibold">
-                      {car.marque} {car.modele}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">
+                        {car.marque} {car.modele}
+                      </p>
+                      {reservedCarIds.includes(car._id) && (
+                        <span className="rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-200">
+                          Reserved
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-zinc-400">
                       Added: {formatDate(car.createdAt)} | {car.prixParJour} MAD/day |{" "}
                       {car.disponible ? "Available" : "Unavailable"}

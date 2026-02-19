@@ -7,6 +7,7 @@ const router = express.Router();
 
 const {
   getAllCars,
+  getReservedCarIds,
   getCarById,
   createCar,
   updateCar,
@@ -23,6 +24,7 @@ const {
 
 // Routes publiques
 router.get('/', getAllCars);
+router.get('/reserved-ids', getReservedCarIds);
 router.get('/:id', mongoIdParam, getCarById);
 
 // Routes admin uniquement

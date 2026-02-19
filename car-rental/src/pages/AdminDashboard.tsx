@@ -12,6 +12,7 @@ import StatsCards from "./admin/components/StatsCards";
 import { bookingStatuses, initialCarForm } from "./admin/types";
 import type { BookingFilter, BookingItem, CarForm, CarItem, TabKey } from "./admin/types";
 import { fileToDataUrl, showApiError } from "./admin/utils";
+import { fetchReservedCarIds } from "../utils/reservedCars";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
@@ -22,6 +23,7 @@ export default function AdminDashboard() {
   const [carsTotalCount, setCarsTotalCount] = useState(0);
   const [availableCarsCount, setAvailableCarsCount] = useState(0);
   const [carsLoading, setCarsLoading] = useState(false);
+  const [reservedCarIds, setReservedCarIds] = useState<string[]>([]);
 
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [bookingFilter, setBookingFilter] = useState<BookingFilter>("all");
@@ -61,6 +63,8 @@ export default function AdminDashboard() {
       setCarsPage(latestCarsPagination?.page || 1);
       setCarsTotalCount(allCarsCount);
       setAvailableCarsCount(availableCount);
+      const ids = await fetchReservedCarIds();
+      setReservedCarIds(ids);
     } catch (error) {
       showApiError(error);
     } finally {
@@ -255,6 +259,7 @@ export default function AdminDashboard() {
             <OverviewPanel
               carsLoading={carsLoading}
               cars={cars}
+              reservedCarIds={reservedCarIds}
               onEditCar={handleEditCar}
               onDeleteCar={handleDeleteCar}
               pendingBookingsCount={pendingBookingsCount}
@@ -267,6 +272,7 @@ export default function AdminDashboard() {
             <CarsPanel
               carsLoading={carsLoading}
               cars={cars}
+              reservedCarIds={reservedCarIds}
               carsPage={carsPage}
               carsTotalPages={carsTotalPages}
               onPrevPage={() => fetchCars(carsPage - 1)}
