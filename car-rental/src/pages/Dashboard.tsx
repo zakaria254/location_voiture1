@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Ban, CalendarDays, CarFront, CircleDollarSign, RefreshCw } from "lucide-react";
 import api from "../api/axiosInstance";
 import { formatDate, showApiError } from "./admin/utils";
@@ -26,6 +26,12 @@ export default function Dashboard() {
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | BookingItem["statut"]>("all");
+  const [minTotal, setMinTotal] = useState("");
+  const [maxTotal, setMaxTotal] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const loadBookings = useCallback(async (showLoader = true) => {
     if (showLoader) setLoading(true);
@@ -61,6 +67,32 @@ export default function Dashboard() {
     }
   };
 
+  const filteredBookings = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const min = minTotal ? Number(minTotal) : null;
+    const max = maxTotal ? Number(maxTotal) : null;
+    const from = dateFrom ? new Date(dateFrom) : null;
+    const to = dateTo ? new Date(dateTo) : null;
+
+    return bookings.filter((booking) => {
+      if (statusFilter !== "all" && booking.statut !== statusFilter) return false;
+
+      const label = `${booking.carId?.marque || ""} ${booking.carId?.modele || ""}`.toLowerCase();
+      if (q && !label.includes(q) && !booking.statut.toLowerCase().includes(q)) return false;
+
+      const total = Number(booking.prixTotal || 0);
+      if (min !== null && total < min) return false;
+      if (max !== null && total > max) return false;
+
+      const start = new Date(booking.dateDebut);
+      const end = new Date(booking.dateFin);
+      if (from && end < from) return false;
+      if (to && start > to) return false;
+
+      return true;
+    });
+  }, [bookings, search, statusFilter, minTotal, maxTotal, dateFrom, dateTo]);
+
   return (
     <main className="min-h-screen bg-zinc-950 px-4 pb-12 pt-28 text-white md:px-6">
       <section className="mx-auto w-full max-w-6xl">
@@ -80,6 +112,57 @@ export default function Dashboard() {
           </button>
         </div>
 
+        <div className="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2 text-sm outline-none"
+            placeholder="Search by car or status"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as "all" | BookingItem["statut"])}
+            className="rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2 text-sm outline-none"
+          >
+            <option value="all">All statuses</option>
+            <option value="en_attente">en_attente</option>
+            <option value="confirmee">confirmee</option>
+            <option value="en_cours">en_cours</option>
+            <option value="terminee">terminee</option>
+            <option value="annulee">annulee</option>
+          </select>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={minTotal}
+            onChange={(e) => setMinTotal(e.target.value)}
+            className="rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2 text-sm outline-none"
+            placeholder="Min total (MAD)"
+          />
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={maxTotal}
+            onChange={(e) => setMaxTotal(e.target.value)}
+            className="rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2 text-sm outline-none"
+            placeholder="Max total (MAD)"
+          />
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2 text-sm outline-none"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2 text-sm outline-none"
+          />
+        </div>
+
         {loading ? (
           <section className="rounded-2xl border border-white/10 bg-zinc-900/70 p-6">
             <p className="text-zinc-400">Loading your bookings...</p>
@@ -89,9 +172,14 @@ export default function Dashboard() {
             <h2 className="text-2xl font-semibold">No bookings yet</h2>
             <p className="mt-2 text-zinc-400">Once you reserve a car, your bookings will appear here.</p>
           </section>
+        ) : filteredBookings.length === 0 ? (
+          <section className="rounded-2xl border border-white/10 bg-zinc-900/70 p-8 text-center">
+            <h2 className="text-2xl font-semibold">No bookings match filters</h2>
+            <p className="mt-2 text-zinc-400">Change your filter values to see matching bookings.</p>
+          </section>
         ) : (
           <div className="grid gap-4">
-            {bookings.map((booking) => {
+            {filteredBookings.map((booking) => {
               const statusMeta = statusStyles[booking.statut] ?? { color: "slate" as StatusColor, label: booking.statut };
               const isCancellable = !["terminee", "annulee", "en_cours"].includes(booking.statut);
 

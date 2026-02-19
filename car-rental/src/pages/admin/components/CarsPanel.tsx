@@ -25,6 +25,20 @@ type CarsPanelProps = {
   onClearImage: () => void;
   onSubmitCar: (e: FormEvent) => void;
   onResetCarForm: () => void;
+  carSearch: string;
+  carDescriptionSearch: string;
+  carMinPrice: string;
+  carMaxPrice: string;
+  carYearFilter: string;
+  carAvailabilityFilter: "all" | "available" | "unavailable";
+  carReservedFilter: "all" | "reserved" | "not_reserved";
+  onCarSearchChange: (value: string) => void;
+  onCarDescriptionSearchChange: (value: string) => void;
+  onCarMinPriceChange: (value: string) => void;
+  onCarMaxPriceChange: (value: string) => void;
+  onCarYearFilterChange: (value: string) => void;
+  onCarAvailabilityFilterChange: (value: "all" | "available" | "unavailable") => void;
+  onCarReservedFilterChange: (value: "all" | "reserved" | "not_reserved") => void;
 };
 
 export default function CarsPanel({
@@ -47,32 +61,106 @@ export default function CarsPanel({
   onClearImage,
   onSubmitCar,
   onResetCarForm,
+  carSearch,
+  carDescriptionSearch,
+  carMinPrice,
+  carMaxPrice,
+  carYearFilter,
+  carAvailabilityFilter,
+  carReservedFilter,
+  onCarSearchChange,
+  onCarDescriptionSearchChange,
+  onCarMinPriceChange,
+  onCarMaxPriceChange,
+  onCarYearFilterChange,
+  onCarAvailabilityFilterChange,
+  onCarReservedFilterChange,
 }: CarsPanelProps) {
   return (
     <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
       <section className="rounded-2xl border border-white/10 bg-zinc-900/70 p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Cars list (5 per page)</h2>
-          <div className="flex items-center gap-2 text-sm">
-            <button
-              type="button"
-              disabled={carsPage <= 1 || carsLoading}
-              onClick={onPrevPage}
-              className="rounded-lg border border-white/10 px-3 py-1.5 disabled:opacity-40"
+        <div className="mb-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Cars list (5 per page)</h2>
+            <div className="flex items-center gap-2 text-sm">
+              <button
+                type="button"
+                disabled={carsPage <= 1 || carsLoading}
+                onClick={onPrevPage}
+                className="rounded-lg border border-white/10 px-3 py-1.5 disabled:opacity-40"
+              >
+                Prev
+              </button>
+              <span className="text-zinc-400">
+                Page {carsPage}/{carsTotalPages}
+              </span>
+              <button
+                type="button"
+                disabled={carsPage >= carsTotalPages || carsLoading}
+                onClick={onNextPage}
+                className="rounded-lg border border-white/10 px-3 py-1.5 disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <input
+              value={carSearch}
+              onChange={(e) => onCarSearchChange(e.target.value)}
+              className="rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 text-sm outline-none"
+              placeholder="Search marque/model"
+            />
+            <input
+              value={carDescriptionSearch}
+              onChange={(e) => onCarDescriptionSearchChange(e.target.value)}
+              className="rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 text-sm outline-none"
+              placeholder="Description contains..."
+            />
+            <input
+              type="number"
+              min="0"
+              value={carYearFilter}
+              onChange={(e) => onCarYearFilterChange(e.target.value)}
+              className="rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 text-sm outline-none"
+              placeholder="Year (exact)"
+            />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={carMinPrice}
+              onChange={(e) => onCarMinPriceChange(e.target.value)}
+              className="rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 text-sm outline-none"
+              placeholder="Min price/day"
+            />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={carMaxPrice}
+              onChange={(e) => onCarMaxPriceChange(e.target.value)}
+              className="rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 text-sm outline-none"
+              placeholder="Max price/day"
+            />
+            <select
+              value={carAvailabilityFilter}
+              onChange={(e) => onCarAvailabilityFilterChange(e.target.value as "all" | "available" | "unavailable")}
+              className="rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 text-sm outline-none"
             >
-              Prev
-            </button>
-            <span className="text-zinc-400">
-              Page {carsPage}/{carsTotalPages}
-            </span>
-            <button
-              type="button"
-              disabled={carsPage >= carsTotalPages || carsLoading}
-              onClick={onNextPage}
-              className="rounded-lg border border-white/10 px-3 py-1.5 disabled:opacity-40"
+              <option value="all">All availability</option>
+              <option value="available">Available</option>
+              <option value="unavailable">Unavailable</option>
+            </select>
+            <select
+              value={carReservedFilter}
+              onChange={(e) => onCarReservedFilterChange(e.target.value as "all" | "reserved" | "not_reserved")}
+              className="rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 text-sm outline-none sm:col-span-2 lg:col-span-1"
             >
-              Next
-            </button>
+              <option value="all">All reservation states</option>
+              <option value="reserved">Reserved only</option>
+              <option value="not_reserved">Not reserved</option>
+            </select>
           </div>
         </div>
 

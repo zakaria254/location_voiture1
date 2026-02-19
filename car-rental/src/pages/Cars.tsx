@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axiosInstance";
 import { useAuth } from "../context/AuthContext";
@@ -12,6 +12,7 @@ type Car = {
   image?: string;
   annee?: number;
   disponible?: boolean;
+  description?: string;
 };
 
 export default function Cars() {
@@ -20,9 +21,17 @@ export default function Cars() {
   const [reservedCarIds, setReservedCarIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [descriptionSearch, setDescriptionSearch] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [minYear, setMinYear] = useState("");
+  const [maxYear, setMaxYear] = useState("");
+  const [availabilityFilter, setAvailabilityFilter] = useState<"all" | "available" | "unavailable">("all");
+  const [reservationFilter, setReservationFilter] = useState<"all" | "reserved" | "not_reserved">("all");
 
   useEffect(() => {
-    Promise.all([api.get("/cars?limit=12"), fetchReservedCarIds()])
+    Promise.all([api.get("/cars?limit=50&sort=-createdAt"), fetchReservedCarIds()])
       .then(([carsRes, ids]) => {
         const list = carsRes.data?.data?.cars ?? [];
         setCars(list);
@@ -33,6 +42,51 @@ export default function Cars() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  const filteredCars = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const descQ = descriptionSearch.trim().toLowerCase();
+    const minP = minPrice ? Number(minPrice) : null;
+    const maxP = maxPrice ? Number(maxPrice) : null;
+    const minY = minYear ? Number(minYear) : null;
+    const maxY = maxYear ? Number(maxYear) : null;
+
+    return cars.filter((car) => {
+      const label = `${car.marque || ""} ${car.modele || ""}`.toLowerCase();
+      if (q && !label.includes(q)) return false;
+
+      const description = (car.description || "").toLowerCase();
+      if (descQ && !description.includes(descQ)) return false;
+
+      const price = Number(car.prixParJour || 0);
+      if (minP !== null && price < minP) return false;
+      if (maxP !== null && price > maxP) return false;
+
+      const year = Number(car.annee || 0);
+      if (minY !== null && year < minY) return false;
+      if (maxY !== null && year > maxY) return false;
+
+      if (availabilityFilter === "available" && !car.disponible) return false;
+      if (availabilityFilter === "unavailable" && car.disponible) return false;
+
+      const isReserved = reservedCarIds.includes(car._id);
+      if (reservationFilter === "reserved" && !isReserved) return false;
+      if (reservationFilter === "not_reserved" && isReserved) return false;
+
+      return true;
+    });
+  }, [
+    cars,
+    search,
+    descriptionSearch,
+    minPrice,
+    maxPrice,
+    minYear,
+    maxYear,
+    availabilityFilter,
+    reservationFilter,
+    reservedCarIds,
+  ]);
 
   return (
     <main className="min-h-screen bg-zinc-950 pt-32 pb-16 px-6">
@@ -49,8 +103,79 @@ export default function Cars() {
         )}
 
         {!loading && cars.length > 0 && (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {cars.map((car) => (
+          <>
+            <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm outline-none"
+                placeholder="Search marque/model"
+              />
+              <input
+                value={descriptionSearch}
+                onChange={(e) => setDescriptionSearch(e.target.value)}
+                className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm outline-none"
+                placeholder="Description contains..."
+              />
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm outline-none"
+                placeholder="Min price/day"
+              />
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm outline-none"
+                placeholder="Max price/day"
+              />
+              <input
+                type="number"
+                min="1900"
+                value={minYear}
+                onChange={(e) => setMinYear(e.target.value)}
+                className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm outline-none"
+                placeholder="Min year"
+              />
+              <input
+                type="number"
+                min="1900"
+                value={maxYear}
+                onChange={(e) => setMaxYear(e.target.value)}
+                className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm outline-none"
+                placeholder="Max year"
+              />
+              <select
+                value={availabilityFilter}
+                onChange={(e) => setAvailabilityFilter(e.target.value as "all" | "available" | "unavailable")}
+                className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm outline-none"
+              >
+                <option value="all">All availability</option>
+                <option value="available">Available</option>
+                <option value="unavailable">Unavailable</option>
+              </select>
+              <select
+                value={reservationFilter}
+                onChange={(e) => setReservationFilter(e.target.value as "all" | "reserved" | "not_reserved")}
+                className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm outline-none"
+              >
+                <option value="all">All reservation states</option>
+                <option value="reserved">Reserved</option>
+                <option value="not_reserved">Not reserved</option>
+              </select>
+            </div>
+
+            {filteredCars.length === 0 ? (
+              <p className="text-zinc-400">No cars match your current filters.</p>
+            ) : (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredCars.map((car) => (
               <article key={car._id} className="rounded-2xl border border-white/10 bg-zinc-900/70 overflow-hidden">
                 <img
                   src={car.image || "https://via.placeholder.com/800x500?text=Car"}
@@ -95,8 +220,10 @@ export default function Cars() {
                   </div>
                 </div>
               </article>
-            ))}
-          </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </section>
     </main>
