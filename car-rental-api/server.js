@@ -19,6 +19,7 @@ const errorHandler = require('./middlewares/errorHandler');
 const authRoutes = require('./routes/authRoutes');
 const carRoutes = require('./routes/carRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 
 // Initialisation Express
 const app = express();
@@ -87,7 +88,8 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       cars: '/api/cars',
-      bookings: '/api/bookings'
+      bookings: '/api/bookings',
+      chat: '/api/chat'
     }
   });
 });
@@ -95,6 +97,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/cars', carRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Route 404 pour les endpoints inexistants
 app.use('*', (req, res) => {
