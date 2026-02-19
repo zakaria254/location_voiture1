@@ -11,6 +11,7 @@ import CarDetails from "./pages/CarDetails.tsx";
 import Booking from "./pages/Booking.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import AdminDashboard from "./pages/AdminDashboard.tsx";
+import ChatWidget from "./components/ChatWidget.tsx";
 function AdminCarDetailsRedirect() {
   const { id } = useParams<{ id: string }>();
   return <Navigate to={id ? `/cars/${id}?from=admin` : "/cars"} replace />;
@@ -70,6 +71,7 @@ function App() {
             {/* Optionnel: page 404 */}
             <Route path="*" element={<div>404 - Page non trouvée</div>} />
           </Routes>
+          <ChatWidget />
           <Toaster position="top-center" />
         </div>
       </BrowserRouter>
