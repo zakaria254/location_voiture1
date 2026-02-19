@@ -4,7 +4,15 @@
 
 const Car = require('../models/Car');
 const Booking = require('../models/Booking');
+const DeletedCar = require('../models/DeletedCar');
 const ApiError = require('../utils/ApiError');
+
+const normalizeCarImages = (car) => {
+  const images = Array.isArray(car.images) && car.images.length
+    ? car.images
+    : (car.image ? [car.image] : []);
+  return { ...car, images, image: car.image || images[0] || '' };
+};
 
 // ========================
 // LISTER TOUTES LES VOITURES
@@ -64,10 +72,12 @@ const getAllCars = async (req, res, next) => {
       Car.countDocuments(filter)
     ]);
 
+    const normalizedCars = cars.map(normalizeCarImages);
+
     res.status(200).json({
       success: true,
       data: {
-        cars,
+        cars: normalizedCars,
         pagination: {
           total,
           page: pageNum,
@@ -97,7 +107,7 @@ const getCarById = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: { car }
+      data: { car: normalizeCarImages(car) }
     });
   } catch (error) {
     next(error);
@@ -110,14 +120,22 @@ const getCarById = async (req, res, next) => {
 // POST /api/cars
 const createCar = async (req, res, next) => {
   try {
-    const { marque, modele, prixParJour, disponible, image, annee, description } = req.body;
+    const { marque, modele, prixParJour, disponible, image, images, annee, description } = req.body;
+
+    const normalizedImages = Array.isArray(images)
+      ? images.map((item) => String(item || '').trim()).filter(Boolean)
+      : [];
+    const mainImage = typeof image === 'string' && image.trim()
+      ? image.trim()
+      : (normalizedImages[0] || undefined);
 
     const car = await Car.create({
       marque,
       modele,
       prixParJour,
       disponible,
-      image,
+      image: mainImage,
+      images: normalizedImages.length ? normalizedImages : (mainImage ? [mainImage] : []),
       annee,
       description
     });
@@ -139,7 +157,7 @@ const createCar = async (req, res, next) => {
 const updateCar = async (req, res, next) => {
   try {
     // Champs autorisés à la mise à jour
-    const allowedFields = ['marque', 'modele', 'prixParJour', 'disponible', 'image', 'annee', 'description'];
+    const allowedFields = ['marque', 'modele', 'prixParJour', 'disponible', 'image', 'images', 'annee', 'description'];
     const updates = {};
 
     // Ne garder que les champs autorisés et présents dans le body
@@ -147,6 +165,21 @@ const updateCar = async (req, res, next) => {
       if (req.body[field] !== undefined) {
         updates[field] = req.body[field];
       }
+    }
+
+    if (updates.images !== undefined) {
+      updates.images = Array.isArray(updates.images)
+        ? updates.images.map((item) => String(item || '').trim()).filter(Boolean)
+        : [];
+      if (!updates.image && updates.images.length > 0) {
+        updates.image = updates.images[0];
+      }
+      if (updates.images.length === 0 && updates.image === undefined) {
+        updates.image = '';
+      }
+    } else if (typeof updates.image === 'string' && updates.image.trim()) {
+      updates.image = updates.image.trim();
+      updates.images = [updates.image];
     }
 
     if (Object.keys(updates).length === 0) {
@@ -194,11 +227,19 @@ const deleteCar = async (req, res, next) => {
       );
     }
 
-    const car = await Car.findByIdAndDelete(req.params.id);
+    const car = await Car.findById(req.params.id);
 
     if (!car) {
       throw ApiError.notFound('Voiture introuvable');
     }
+
+    await DeletedCar.create({
+      originalCarId: car._id,
+      deletedBy: { userId: req.user.id, role: req.user.role },
+      car: car.toObject()
+    });
+
+    await car.deleteOne();
 
     res.status(200).json({
       success: true,
@@ -235,11 +276,49 @@ const getReservedCarIds = async (req, res, next) => {
   }
 };
 
+// ========================
+// ARCHIVES DES VOITURES SUPPRIMEES (ADMIN)
+// ========================
+// GET /api/cars/admin/archives/deleted
+const getDeletedCarsArchive = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+    const skip = (pageNum - 1) * limitNum;
+
+    const [records, total] = await Promise.all([
+      DeletedCar.find()
+        .sort('-createdAt')
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      DeletedCar.countDocuments()
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        records,
+        pagination: {
+          total,
+          page: pageNum,
+          limit: limitNum,
+          pages: Math.ceil(total / limitNum)
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllCars,
   getReservedCarIds,
   getCarById,
   createCar,
   updateCar,
-  deleteCar
+  deleteCar,
+  getDeletedCarsArchive
 };

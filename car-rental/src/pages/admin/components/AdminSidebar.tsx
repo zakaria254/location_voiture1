@@ -1,4 +1,4 @@
-import { Car, CalendarCheck, ChartNoAxesCombined, LayoutDashboard } from "lucide-react";
+import { Archive, Car, CalendarCheck, ChartNoAxesCombined, LayoutDashboard } from "lucide-react";
 import type { ReactNode } from "react";
 import type { TabKey } from "../types";
 
@@ -13,6 +13,7 @@ const sidebarItems: SidebarItem[] = [
   { key: "cars", label: "Cars", icon: <Car className="h-4 w-4" /> },
   { key: "bookings", label: "Bookings", icon: <CalendarCheck className="h-4 w-4" /> },
   { key: "insights", label: "Insights", icon: <ChartNoAxesCombined className="h-4 w-4" /> },
+  { key: "archives", label: "Archives", icon: <Archive className="h-4 w-4" /> },
 ];
 
 type AdminSidebarProps = {
@@ -24,7 +25,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
   return (
     <aside className="rounded-2xl border border-white/10 bg-zinc-900/70 p-4 lg:sticky lg:top-28 lg:h-fit">
       <p className="mb-4 text-xs uppercase tracking-[0.25em] text-zinc-400">Admin Panel</p>
-      <nav className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-1">
+      <nav className="grid grid-cols-2 gap-2 sm:grid-cols-5 lg:grid-cols-1">
         {sidebarItems.map((item) => (
           <button
             key={item.key}

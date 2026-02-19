@@ -44,6 +44,17 @@ const carSchema = new mongoose.Schema(
       trim: true
     },
 
+    images: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: function (value) {
+          return Array.isArray(value) && value.length <= 10;
+        },
+        message: 'Vous pouvez ajouter jusqu a 10 images maximum'
+      }
+    },
+
     // Champs supplémentaires utiles
     annee: {
       type: Number,
@@ -70,6 +81,24 @@ const carSchema = new mongoose.Schema(
 // Index composé pour rechercher les voitures disponibles par marque
 carSchema.index({ disponible: 1, marque: 1 });
 carSchema.index({ prixParJour: 1 });
+
+carSchema.pre('validate', function (next) {
+  if (Array.isArray(this.images)) {
+    this.images = this.images
+      .map((img) => (typeof img === 'string' ? img.trim() : ''))
+      .filter(Boolean);
+  }
+
+  if (!this.image && this.images && this.images.length > 0) {
+    this.image = this.images[0];
+  }
+
+  if (this.image && (!this.images || this.images.length === 0)) {
+    this.images = [this.image];
+  }
+
+  next();
+});
 
 const Car = mongoose.model('Car', carSchema);
 

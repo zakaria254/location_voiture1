@@ -4,6 +4,7 @@
 
 const Booking = require("../models/Booking");
 const Car = require("../models/Car");
+const DeletedBooking = require("../models/DeletedBooking");
 const ApiError = require("../utils/ApiError");
 
 // ========================
@@ -168,7 +169,7 @@ const getBookingById = async (req, res, next) => {
   try {
     const booking = await Booking.findById(req.params.id)
       .populate("userId", "name email")
-      .populate("carId", "marque modele prixParJour image")
+      .populate("carId", "marque modele prixParJour image images annee description disponible createdAt")
       .lean();
 
     if (!booking) {
@@ -188,6 +189,30 @@ const getBookingById = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: { booking },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ========================
+// RESERVATION ACTIVE PAR VOITURE (ADMIN)
+// ========================
+// GET /api/bookings/car/:carId/active
+const getActiveBookingByCar = async (req, res, next) => {
+  try {
+    const booking = await Booking.findOne({
+      carId: req.params.carId,
+      statut: { $in: ["en_attente", "confirmee", "en_cours"] },
+    })
+      .sort("-createdAt")
+      .populate("userId", "name email")
+      .populate("carId", "marque modele prixParJour image images annee description disponible createdAt")
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: { booking: booking || null },
     });
   } catch (error) {
     next(error);
@@ -250,6 +275,46 @@ const cancelBooking = async (req, res, next) => {
 };
 
 // ========================
+// SUPPRIMER DEFINITIVEMENT UNE RESERVATION ANNULEE
+// ========================
+// DELETE /api/bookings/:id/permanent
+const deleteBookingPermanently = async (req, res, next) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking) {
+      throw ApiError.notFound("Reservation introuvable");
+    }
+
+    if (
+      booking.userId.toString() !== req.user.id &&
+      req.user.role !== "admin"
+    ) {
+      throw ApiError.forbidden("Vous ne pouvez supprimer que vos propres reservations");
+    }
+
+    if (booking.statut !== "annulee") {
+      throw ApiError.conflict("Seules les reservations annulees peuvent etre supprimees");
+    }
+
+    await DeletedBooking.create({
+      originalBookingId: booking._id,
+      deletedBy: { userId: req.user.id, role: req.user.role },
+      booking: booking.toObject(),
+    });
+
+    await booking.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: "Reservation supprimee definitivement",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ========================
 // TOUTES LES RÉSERVATIONS (ADMIN)
 // ========================
 // GET /api/bookings/all
@@ -279,6 +344,43 @@ const getAllBookings = async (req, res, next) => {
       success: true,
       data: {
         bookings,
+        pagination: {
+          total,
+          page: pageNum,
+          limit: limitNum,
+          pages: Math.ceil(total / limitNum),
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ========================
+// ARCHIVES DES RESERVATIONS SUPPRIMEES (ADMIN)
+// ========================
+// GET /api/bookings/admin/archives/deleted
+const getDeletedBookingsArchive = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+    const skip = (pageNum - 1) * limitNum;
+
+    const [records, total] = await Promise.all([
+      DeletedBooking.find()
+        .sort("-createdAt")
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      DeletedBooking.countDocuments(),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        records,
         pagination: {
           total,
           page: pageNum,
@@ -341,7 +443,10 @@ module.exports = {
   createBooking,
   getMyBookings,
   getBookingById,
+  getActiveBookingByCar,
   cancelBooking,
+  deleteBookingPermanently,
   getAllBookings,
+  getDeletedBookingsArchive,
   updateBookingStatus,
 };

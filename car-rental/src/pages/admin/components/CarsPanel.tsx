@@ -174,9 +174,9 @@ export default function CarsPanel({
               <article key={car._id} className="rounded-xl border border-white/10 bg-zinc-800/70 p-3">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
-                    {car.image ? (
+                    {(car.images?.[0] || car.image) ? (
                       <img
-                        src={car.image}
+                        src={car.images?.[0] || car.image}
                         alt={`${car.marque} ${car.modele}`}
                         className="h-16 w-16 rounded-lg object-cover"
                       />
@@ -189,6 +189,11 @@ export default function CarsPanel({
                       <p className="font-semibold">
                         {car.marque} {car.modele}
                       </p>
+                      {!!(car.images?.length && car.images.length > 1) && (
+                        <span className="rounded-full border border-white/15 px-2 py-0.5 text-xs text-zinc-300">
+                          +{car.images.length - 1} photos
+                        </span>
+                      )}
                       {reservedCarIds.includes(car._id) && (
                         <span className="rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-200">
                           Reserved
@@ -273,20 +278,46 @@ export default function CarsPanel({
             ref={imageInputRef}
             type="file"
             accept="image/*"
+            multiple
             onChange={onImageFileChange}
             className="w-full rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-primary/90 file:px-3 file:py-1.5 file:font-medium file:text-zinc-950"
           />
-          <p className="text-xs text-zinc-400">Upload image (jpg/png/webp), max 3MB.</p>
-          {carForm.image && (
+          <p className="text-xs text-zinc-400">Upload up to 10 images (jpg/png/webp), max 3MB each.</p>
+          {carForm.images.length > 0 && (
             <div className="rounded-xl border border-white/10 bg-zinc-800/60 p-3">
-              <p className="mb-2 text-xs text-zinc-400">Image preview</p>
-              <img src={carForm.image} alt="Selected car" className="h-36 w-full rounded-lg object-cover" />
+              <p className="mb-2 text-xs text-zinc-400">Gallery preview ({carForm.images.length}/10)</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {carForm.images.map((img, index) => (
+                  <div key={`${img.slice(0, 24)}-${index}`} className="relative">
+                    <img src={img} alt={`Selected car ${index + 1}`} className="h-24 w-full rounded-lg object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextImages = carForm.images.filter((_, i) => i !== index);
+                        onCarFormChange({
+                          ...carForm,
+                          images: nextImages,
+                          image: nextImages[0] || "",
+                        });
+                      }}
+                      className="absolute right-1 top-1 rounded-md bg-black/70 px-2 py-0.5 text-xs text-white hover:bg-black"
+                    >
+                      Remove
+                    </button>
+                    {index === 0 && (
+                      <span className="absolute left-1 top-1 rounded-md bg-primary/90 px-2 py-0.5 text-[10px] font-semibold text-zinc-950">
+                        Cover
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
               <button
                 type="button"
                 onClick={onClearImage}
-                className="mt-2 rounded-lg border border-white/20 px-3 py-1.5 text-xs hover:bg-zinc-700"
+                className="mt-3 rounded-lg border border-white/20 px-3 py-1.5 text-xs hover:bg-zinc-700"
               >
-                Remove image
+                Clear all images
               </button>
             </div>
           )}
