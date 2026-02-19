@@ -41,6 +41,18 @@ export default function AdminDashboard() {
   const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const [bookingSearch, setBookingSearch] = useState("");
+  const [bookingMinPrice, setBookingMinPrice] = useState("");
+  const [bookingMaxPrice, setBookingMaxPrice] = useState("");
+  const [bookingDateFrom, setBookingDateFrom] = useState("");
+  const [bookingDateTo, setBookingDateTo] = useState("");
+
+  const [carSearch, setCarSearch] = useState("");
+  const [carDescriptionSearch, setCarDescriptionSearch] = useState("");
+  const [carMinPrice, setCarMinPrice] = useState("");
+  const [carMaxPrice, setCarMaxPrice] = useState("");
+  const [carYearFilter, setCarYearFilter] = useState("");
+  const [carAvailabilityFilter, setCarAvailabilityFilter] = useState<"all" | "available" | "unavailable">("all");
+  const [carReservedFilter, setCarReservedFilter] = useState<"all" | "reserved" | "not_reserved">("all");
 
   const fetchCars = async (page = carsPage) => {
     setCarsLoading(true);
@@ -112,14 +124,70 @@ export default function AdminDashboard() {
 
   const filteredBookings = useMemo(() => {
     const q = bookingSearch.trim().toLowerCase();
-    if (!q) return bookings;
+    const min = bookingMinPrice ? Number(bookingMinPrice) : null;
+    const max = bookingMaxPrice ? Number(bookingMaxPrice) : null;
+    const fromDate = bookingDateFrom ? new Date(bookingDateFrom) : null;
+    const toDate = bookingDateTo ? new Date(bookingDateTo) : null;
 
     return bookings.filter((booking) => {
       const carLabel = `${booking.carId?.marque || ""} ${booking.carId?.modele || ""}`.toLowerCase();
       const userLabel = `${booking.userId?.name || ""} ${booking.userId?.email || ""}`.toLowerCase();
-      return carLabel.includes(q) || userLabel.includes(q) || booking.statut.toLowerCase().includes(q);
+      const matchText = !q || carLabel.includes(q) || userLabel.includes(q) || booking.statut.toLowerCase().includes(q);
+      if (!matchText) return false;
+
+      const total = Number(booking.prixTotal || 0);
+      if (min !== null && total < min) return false;
+      if (max !== null && total > max) return false;
+
+      const start = new Date(booking.dateDebut);
+      const end = new Date(booking.dateFin);
+      if (fromDate && end < fromDate) return false;
+      if (toDate && start > toDate) return false;
+
+      return true;
     });
-  }, [bookings, bookingSearch]);
+  }, [bookings, bookingSearch, bookingMinPrice, bookingMaxPrice, bookingDateFrom, bookingDateTo]);
+
+  const filteredCars = useMemo(() => {
+    const q = carSearch.trim().toLowerCase();
+    const descriptionQ = carDescriptionSearch.trim().toLowerCase();
+    const min = carMinPrice ? Number(carMinPrice) : null;
+    const max = carMaxPrice ? Number(carMaxPrice) : null;
+    const year = carYearFilter ? Number(carYearFilter) : null;
+
+    return cars.filter((car) => {
+      const label = `${car.marque || ""} ${car.modele || ""}`.toLowerCase();
+      if (q && !label.includes(q)) return false;
+
+      const description = (car.description || "").toLowerCase();
+      if (descriptionQ && !description.includes(descriptionQ)) return false;
+
+      const price = Number(car.prixParJour || 0);
+      if (min !== null && price < min) return false;
+      if (max !== null && price > max) return false;
+
+      if (year !== null && Number(car.annee || 0) !== year) return false;
+
+      if (carAvailabilityFilter === "available" && !car.disponible) return false;
+      if (carAvailabilityFilter === "unavailable" && car.disponible) return false;
+
+      const isReserved = reservedCarIds.includes(car._id);
+      if (carReservedFilter === "reserved" && !isReserved) return false;
+      if (carReservedFilter === "not_reserved" && isReserved) return false;
+
+      return true;
+    });
+  }, [
+    cars,
+    carSearch,
+    carDescriptionSearch,
+    carMinPrice,
+    carMaxPrice,
+    carYearFilter,
+    carAvailabilityFilter,
+    carReservedFilter,
+    reservedCarIds,
+  ]);
 
   const resetCarForm = () => {
     setCarForm(initialCarForm);
@@ -284,7 +352,7 @@ export default function AdminDashboard() {
           {activeTab === "cars" && (
             <CarsPanel
               carsLoading={carsLoading}
-              cars={cars}
+              cars={filteredCars}
               reservedCarIds={reservedCarIds}
               carsPage={carsPage}
               carsTotalPages={carsTotalPages}
@@ -305,6 +373,20 @@ export default function AdminDashboard() {
               }}
               onSubmitCar={handleSubmitCar}
               onResetCarForm={resetCarForm}
+              carSearch={carSearch}
+              carDescriptionSearch={carDescriptionSearch}
+              carMinPrice={carMinPrice}
+              carMaxPrice={carMaxPrice}
+              carYearFilter={carYearFilter}
+              carAvailabilityFilter={carAvailabilityFilter}
+              carReservedFilter={carReservedFilter}
+              onCarSearchChange={setCarSearch}
+              onCarDescriptionSearchChange={setCarDescriptionSearch}
+              onCarMinPriceChange={setCarMinPrice}
+              onCarMaxPriceChange={setCarMaxPrice}
+              onCarYearFilterChange={setCarYearFilter}
+              onCarAvailabilityFilterChange={setCarAvailabilityFilter}
+              onCarReservedFilterChange={setCarReservedFilter}
             />
           )}
 
@@ -313,11 +395,19 @@ export default function AdminDashboard() {
               bookingFilter={bookingFilter}
               bookingStatuses={bookingStatuses}
               bookingSearch={bookingSearch}
+              bookingMinPrice={bookingMinPrice}
+              bookingMaxPrice={bookingMaxPrice}
+              bookingDateFrom={bookingDateFrom}
+              bookingDateTo={bookingDateTo}
               bookingsLoading={bookingsLoading}
               filteredBookings={filteredBookings}
               editableStatuses={editableBookingStatuses}
               onFilterChange={setBookingFilter}
               onSearchChange={setBookingSearch}
+              onBookingMinPriceChange={setBookingMinPrice}
+              onBookingMaxPriceChange={setBookingMaxPrice}
+              onBookingDateFromChange={setBookingDateFrom}
+              onBookingDateToChange={setBookingDateTo}
               onCancelBooking={handleCancelBooking}
               onUpdateBookingStatus={handleUpdateBookingStatus}
             />

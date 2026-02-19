@@ -6,11 +6,19 @@ type BookingsPanelProps = {
   bookingFilter: BookingFilter;
   bookingStatuses: BookingFilter[];
   bookingSearch: string;
+  bookingMinPrice: string;
+  bookingMaxPrice: string;
+  bookingDateFrom: string;
+  bookingDateTo: string;
   bookingsLoading: boolean;
   filteredBookings: BookingItem[];
   editableStatuses: BookingItem["statut"][];
   onFilterChange: (value: BookingFilter) => void;
   onSearchChange: (value: string) => void;
+  onBookingMinPriceChange: (value: string) => void;
+  onBookingMaxPriceChange: (value: string) => void;
+  onBookingDateFromChange: (value: string) => void;
+  onBookingDateToChange: (value: string) => void;
   onCancelBooking: (id: string) => void;
   onUpdateBookingStatus: (id: string, status: BookingItem["statut"]) => void;
 };
@@ -19,11 +27,19 @@ export default function BookingsPanel({
   bookingFilter,
   bookingStatuses,
   bookingSearch,
+  bookingMinPrice,
+  bookingMaxPrice,
+  bookingDateFrom,
+  bookingDateTo,
   bookingsLoading,
   filteredBookings,
   editableStatuses,
   onFilterChange,
   onSearchChange,
+  onBookingMinPriceChange,
+  onBookingMaxPriceChange,
+  onBookingDateFromChange,
+  onBookingDateToChange,
   onCancelBooking,
   onUpdateBookingStatus,
 }: BookingsPanelProps) {
@@ -31,7 +47,7 @@ export default function BookingsPanel({
     <section className="rounded-2xl border border-white/10 bg-zinc-900/70 p-5">
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <h2 className="text-xl font-semibold">Bookings management</h2>
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="grid w-full gap-2 sm:grid-cols-2 lg:max-w-4xl lg:grid-cols-3">
           <select
             value={bookingFilter}
             onChange={(e) => onFilterChange(e.target.value as BookingFilter)}
@@ -48,6 +64,36 @@ export default function BookingsPanel({
             onChange={(e) => onSearchChange(e.target.value)}
             className="rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 text-sm outline-none"
             placeholder="Search user/car/status"
+          />
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={bookingMinPrice}
+            onChange={(e) => onBookingMinPriceChange(e.target.value)}
+            className="rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 text-sm outline-none"
+            placeholder="Min total (MAD)"
+          />
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={bookingMaxPrice}
+            onChange={(e) => onBookingMaxPriceChange(e.target.value)}
+            className="rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 text-sm outline-none"
+            placeholder="Max total (MAD)"
+          />
+          <input
+            type="date"
+            value={bookingDateFrom}
+            onChange={(e) => onBookingDateFromChange(e.target.value)}
+            className="rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 text-sm outline-none"
+          />
+          <input
+            type="date"
+            value={bookingDateTo}
+            onChange={(e) => onBookingDateToChange(e.target.value)}
+            className="rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 text-sm outline-none"
           />
         </div>
       </div>
