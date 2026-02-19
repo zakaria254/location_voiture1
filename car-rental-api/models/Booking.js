@@ -44,6 +44,54 @@ const bookingSchema = new mongoose.Schema(
       }
     },
 
+    fullName: {
+      type: String,
+      required: [true, 'Le nom complet est obligatoire'],
+      trim: true,
+      minlength: [2, 'Le nom complet doit contenir au moins 2 caractères'],
+      maxlength: [100, 'Le nom complet ne peut pas dépasser 100 caractères']
+    },
+
+    email: {
+      type: String,
+      required: [true, "L'email est obligatoire"],
+      trim: true,
+      lowercase: true
+    },
+
+    phone: {
+      type: String,
+      required: [true, 'Le numéro de téléphone est obligatoire'],
+      trim: true
+    },
+
+    driverLicenseNumber: {
+      type: String,
+      required: [true, 'Le numéro de permis est obligatoire'],
+      trim: true
+    },
+
+    driverLicenseExpiry: {
+      type: Date,
+      required: [true, "La date d'expiration du permis est obligatoire"]
+    },
+
+    dateOfBirth: {
+      type: Date,
+      required: [true, 'La date de naissance est obligatoire']
+    },
+
+    acceptTerms: {
+      type: Boolean,
+      required: [true, 'Vous devez accepter les conditions de location'],
+      validate: {
+        validator: function (value) {
+          return value === true;
+        },
+        message: 'Vous devez accepter les conditions de location'
+      }
+    },
+
     statut: {
       type: String,
       enum: {
@@ -73,6 +121,7 @@ const bookingSchema = new mongoose.Schema(
 bookingSchema.index({ userId: 1, statut: 1 });
 bookingSchema.index({ carId: 1, dateDebut: 1, dateFin: 1 });
 bookingSchema.index({ statut: 1 });
+bookingSchema.index({ email: 1 });
 
 // ========================
 // MÉTHODES STATIQUES
