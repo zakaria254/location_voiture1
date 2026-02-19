@@ -195,6 +195,15 @@ const bookingRules = [
   validate
 ];
 
+const bookingStatusUpdateRules = [
+  body('statut')
+    .notEmpty().withMessage('Le statut est obligatoire')
+    .isIn(['en_attente', 'confirmee', 'en_cours', 'terminee', 'annulee'])
+    .withMessage('Statut invalide. Valeurs acceptées: en_attente, confirmee, en_cours, terminee, annulee'),
+
+  validate
+];
+
 // ========================
 // RÈGLES : PARAMÈTRES
 // ========================
@@ -212,6 +221,7 @@ module.exports = {
   carRules,
   carUpdateRules,
   bookingRules,
+  bookingStatusUpdateRules,
   mongoIdParam,
   validate
 };

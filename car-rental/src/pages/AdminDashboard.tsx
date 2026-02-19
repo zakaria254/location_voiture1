@@ -9,7 +9,7 @@ import CarsPanel from "./admin/components/CarsPanel";
 import InsightsPanel from "./admin/components/InsightsPanel";
 import OverviewPanel from "./admin/components/OverviewPanel";
 import StatsCards from "./admin/components/StatsCards";
-import { bookingStatuses, initialCarForm } from "./admin/types";
+import { bookingStatuses, editableBookingStatuses, initialCarForm } from "./admin/types";
 import type { BookingFilter, BookingItem, CarForm, CarItem, TabKey } from "./admin/types";
 import { fileToDataUrl, showApiError } from "./admin/utils";
 import { fetchReservedCarIds } from "../utils/reservedCars";
@@ -233,6 +233,19 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleUpdateBookingStatus = async (
+    bookingId: string,
+    statut: BookingItem["statut"]
+  ) => {
+    try {
+      await api.patch(`/bookings/${bookingId}/status`, { statut });
+      toast.success("Booking status updated");
+      fetchBookings(bookingFilter);
+    } catch (error) {
+      showApiError(error);
+    }
+  };
+
   const refreshAll = () => {
     fetchCars(carsPage);
     fetchBookings(bookingFilter);
@@ -302,9 +315,11 @@ export default function AdminDashboard() {
               bookingSearch={bookingSearch}
               bookingsLoading={bookingsLoading}
               filteredBookings={filteredBookings}
+              editableStatuses={editableBookingStatuses}
               onFilterChange={setBookingFilter}
               onSearchChange={setBookingSearch}
               onCancelBooking={handleCancelBooking}
+              onUpdateBookingStatus={handleUpdateBookingStatus}
             />
           )}
 

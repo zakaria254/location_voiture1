@@ -44,6 +44,14 @@ export const bookingStatuses: BookingFilter[] = [
   "annulee",
 ];
 
+export const editableBookingStatuses: BookingItem["statut"][] = [
+  "en_attente",
+  "confirmee",
+  "en_cours",
+  "terminee",
+  "annulee",
+];
+
 export const initialCarForm: CarForm = {
   marque: "",
   modele: "",
