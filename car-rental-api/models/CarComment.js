@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const reviewSchema = new mongoose.Schema(
+const carCommentSchema = new mongoose.Schema(
   {
     car: {
       type: mongoose.Schema.Types.ObjectId,
@@ -12,15 +12,9 @@ const reviewSchema = new mongoose.Schema(
       ref: 'User',
       required: [true, "L'utilisateur est obligatoire"]
     },
-    rating: {
-      type: Number,
-      required: [true, 'La note est obligatoire'],
-      min: [1, 'La note minimum est 1'],
-      max: [5, 'La note maximum est 5']
-    },
     comment: {
       type: String,
-      default: '',
+      required: [true, 'Le commentaire est obligatoire'],
       trim: true,
       maxlength: [500, 'Le commentaire ne peut pas dépasser 500 caractères']
     }
@@ -30,7 +24,7 @@ const reviewSchema = new mongoose.Schema(
   }
 );
 
-reviewSchema.index({ car: 1, user: 1 }, { unique: true });
-reviewSchema.index({ car: 1 });
+carCommentSchema.index({ car: 1, createdAt: -1 });
+carCommentSchema.index({ car: 1, user: 1, createdAt: -1 });
 
-module.exports = mongoose.model('Review', reviewSchema);
+module.exports = mongoose.model('CarComment', carCommentSchema);

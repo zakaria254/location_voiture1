@@ -194,6 +194,21 @@ const ratingRules = [
     .notEmpty().withMessage('La note est obligatoire')
     .isInt({ min: 1, max: 5 }).withMessage('La note doit être comprise entre 1 et 5'),
 
+  body('comment')
+    .optional()
+    .isString().withMessage('Le commentaire doit être une chaine de caractères')
+    .trim()
+    .isLength({ max: 500 }).withMessage('Le commentaire ne peut pas dépasser 500 caractères'),
+
+  validate
+];
+
+const commentRules = [
+  body('comment')
+    .trim()
+    .notEmpty().withMessage('Le commentaire est obligatoire')
+    .isLength({ max: 500 }).withMessage('Le commentaire ne peut pas dépasser 500 caractères'),
+
   validate
 ];
 
@@ -331,15 +346,24 @@ const mongoCarIdParam = [
   validate
 ];
 
+const mongoCommentIdParam = [
+  param('commentId')
+    .isMongoId().withMessage('Identifiant commentaire invalide'),
+
+  validate
+];
+
 module.exports = {
   registerRules,
   loginRules,
   carRules,
   carUpdateRules,
   ratingRules,
+  commentRules,
   bookingRules,
   bookingStatusUpdateRules,
   mongoIdParam,
   mongoCarIdParam,
+  mongoCommentIdParam,
   validate
 };
