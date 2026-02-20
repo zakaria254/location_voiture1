@@ -1,12 +1,25 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Car, ChevronLeft, ChevronRight, CircleDollarSign, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, Calendar, Car, ChevronLeft, ChevronRight, CircleDollarSign, MessageSquare, Pencil, ShieldCheck, Trash2, X } from "lucide-react";
 import api from "../api/axiosInstance";
 import { useAuth } from "../context/AuthContext";
 import type { BookingItem, CarItem } from "./admin/types";
 import { formatDate, showApiError } from "./admin/utils";
 import { fetchReservedCarIds } from "../utils/reservedCars";
 import CarRating from "../components/CarRating";
+
+type CarReview = {
+  _id: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  updatedAt: string;
+  isMine: boolean;
+  user: {
+    _id: string;
+    name: string;
+  };
+};
 
 export default function CarDetails() {
   const { id } = useParams<{ id: string }>();
@@ -20,11 +33,39 @@ export default function CarDetails() {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [activeBooking, setActiveBooking] = useState<BookingItem | null>(null);
+  const [reviews, setReviews] = useState<CarReview[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewRating, setReviewRating] = useState<number>(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [savingReview, setSavingReview] = useState(false);
+  const [deletingReview, setDeletingReview] = useState(false);
 
   const fromAdmin = searchParams.get("from") === "admin";
   const isAdminPath = location.pathname.startsWith("/admin/") || fromAdmin;
   const backTo = isAdminPath ? "/admin" : "/cars";
   const backLabel = isAdminPath ? "Back to admin" : "Back to cars";
+
+  const refreshReviews = useCallback(async () => {
+    if (!id) return;
+    setReviewsLoading(true);
+    try {
+      const response = await api.get(`/cars/${id}/reviews?limit=20`);
+      const nextReviews = response.data?.data?.reviews ?? [];
+      setReviews(nextReviews);
+      const myReview = response.data?.data?.myReview;
+      if (myReview?.rating) {
+        setReviewRating(Number(myReview.rating));
+        setReviewComment(String(myReview.comment ?? ""));
+      } else {
+        setReviewRating(5);
+        setReviewComment("");
+      }
+    } catch {
+      // Keep current UI state.
+    } finally {
+      setReviewsLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -32,9 +73,14 @@ export default function CarDetails() {
     const fetchCar = async () => {
       setLoading(true);
       try {
-        const [carRes, ids] = await Promise.all([api.get(`/cars/${id}`), fetchReservedCarIds()]);
+        const [carRes, ids] = await Promise.all([
+          api.get(`/cars/${id}`),
+          fetchReservedCarIds()
+        ]);
         setCar(carRes.data?.data?.car ?? null);
         setReservedCarIds(ids);
+        await refreshReviews();
+
         setImageFailed(false);
         setActiveImageIndex(0);
       } catch (error) {
@@ -46,7 +92,7 @@ export default function CarDetails() {
     };
 
     fetchCar();
-  }, [id]);
+  }, [id, refreshReviews]);
 
   const galleryImages = useMemo(() => {
     if (!car) return ["https://via.placeholder.com/1200x700?text=Car"];
@@ -54,6 +100,7 @@ export default function CarDetails() {
     const cleaned = raw.map((img) => (img || "").trim()).filter(Boolean);
     return cleaned.length ? cleaned : ["https://via.placeholder.com/1200x700?text=Car"];
   }, [car]);
+  const myReview = useMemo(() => reviews.find((item) => item.isMine) || null, [reviews]);
 
   useEffect(() => {
     if (!isLightboxOpen) return;
@@ -93,6 +140,55 @@ export default function CarDetails() {
 
     fetchActiveBooking();
   }, [car?._id, isReserved, user?.role]);
+
+  const submitReview = async () => {
+    if (!car?._id) return;
+    if (!user) {
+      window.location.href = "/login";
+      return;
+    }
+
+    setSavingReview(true);
+    try {
+      const response = await api.put(`/cars/${car._id}/rating`, {
+        rating: reviewRating,
+        comment: reviewComment
+      });
+
+      const averageRating = Number(response.data?.data?.ratings?.averageRating ?? car.averageRating ?? 0);
+      const totalRatings = Number(response.data?.data?.ratings?.totalRatings ?? car.totalRatings ?? 0);
+
+      setCar((prev) => (prev ? { ...prev, averageRating, totalRatings, userRating: reviewRating } : prev));
+      await refreshReviews();
+    } catch (error) {
+      showApiError(error, "Unable to save your review.");
+    } finally {
+      setSavingReview(false);
+    }
+  };
+
+  const removeReview = async () => {
+    if (!car?._id) return;
+    if (!user) {
+      window.location.href = "/login";
+      return;
+    }
+
+    setDeletingReview(true);
+    try {
+      const response = await api.delete(`/cars/${car._id}/rating`);
+      const averageRating = Number(response.data?.data?.ratings?.averageRating ?? 0);
+      const totalRatings = Number(response.data?.data?.ratings?.totalRatings ?? 0);
+      setCar((prev) => (prev ? { ...prev, averageRating, totalRatings, userRating: null } : prev));
+      setReviewRating(5);
+      setReviewComment("");
+      await refreshReviews();
+    } catch (error) {
+      showApiError(error, "Unable to delete your review.");
+    } finally {
+      setDeletingReview(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-zinc-950 px-4 pb-10 pt-28 text-white md:px-6">
@@ -209,6 +305,114 @@ export default function CarDetails() {
                   ));
                 }}
               />
+
+              <section className="rounded-xl border border-white/10 bg-zinc-800/70 p-4">
+                <div className="mb-4 flex items-center justify-between">
+                  <p className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-200">
+                    <MessageSquare className="h-4 w-4 text-primary" />
+                    Community reviews
+                  </p>
+                  <p className="text-xs text-zinc-400">{reviews.length} visible review(s)</p>
+                </div>
+
+                <div className="mb-4 rounded-xl border border-white/10 bg-zinc-900/60 p-4">
+                  <p className="mb-2 text-sm font-medium text-zinc-200">Write or update your review</p>
+                  <div className="mb-3 flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setReviewRating(star)}
+                        className={`text-2xl transition ${star <= reviewRating ? "text-yellow-400" : "text-zinc-500"}`}
+                        aria-label={`Set ${star} star${star > 1 ? "s" : ""}`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                    <span className="ml-2 text-sm text-zinc-400">{reviewRating}/5</span>
+                  </div>
+                  <textarea
+                    value={reviewComment}
+                    onChange={(event) => setReviewComment(event.target.value)}
+                    maxLength={500}
+                    rows={4}
+                    placeholder={user ? "Share your experience with this car..." : "Login to leave a comment"}
+                    disabled={!user || savingReview}
+                    className="w-full rounded-xl border border-white/10 bg-zinc-950/60 p-3 text-sm text-zinc-200 outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={submitReview}
+                      disabled={savingReview}
+                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-zinc-950 hover:opacity-90 disabled:opacity-60"
+                    >
+                      {savingReview ? "Saving..." : "Save review"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={removeReview}
+                      disabled={deletingReview || !myReview}
+                      className="rounded-lg border border-red-400/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10 disabled:opacity-60"
+                    >
+                      {deletingReview ? "Removing..." : "Delete my review"}
+                    </button>
+                    {!user && (
+                      <Link to="/login" className="rounded-lg border border-white/20 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800">
+                        Login to review
+                      </Link>
+                    )}
+                  </div>
+                </div>
+
+                {reviewsLoading ? (
+                  <p className="text-sm text-zinc-400">Refreshing reviews...</p>
+                ) : reviews.length === 0 ? (
+                  <p className="text-sm text-zinc-400">No reviews yet. Be the first to rate and comment.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {reviews.map((review) => (
+                      <article key={review._id} className="rounded-xl border border-white/10 bg-zinc-900/60 p-4">
+                        <div className="mb-2 flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-zinc-100">{review.user?.name || "User"}</p>
+                            <p className="text-xs text-zinc-500">
+                              {formatDate(review.updatedAt || review.createdAt)}
+                            </p>
+                          </div>
+                          <div className="text-sm text-yellow-400">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</div>
+                        </div>
+                        <p className="text-sm leading-6 text-zinc-300">
+                          {review.comment?.trim() ? review.comment : "No written comment."}
+                        </p>
+                        {review.isMine && (
+                          <div className="mt-3 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReviewRating(review.rating);
+                                setReviewComment(review.comment || "");
+                              }}
+                              className="inline-flex items-center gap-1 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-800"
+                            >
+                              <Pencil className="h-3 w-3" />
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={removeReview}
+                              className="inline-flex items-center gap-1 rounded-lg border border-red-400/40 px-3 py-1.5 text-xs text-red-300 hover:bg-red-500/10"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
 
               <div className="rounded-xl border border-white/10 bg-zinc-800/70 p-4">
                 <p className="mb-2 inline-flex items-center gap-2 text-zinc-400">

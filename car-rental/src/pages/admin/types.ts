@@ -10,6 +10,12 @@ export type CarItem = {
   averageRating?: number;
   totalRatings?: number;
   userRating?: number | null;
+  userReview?: {
+    _id: string;
+    rating: number;
+    comment: string;
+    updatedAt?: string;
+  } | null;
   disponible: boolean;
   createdAt?: string;
 };

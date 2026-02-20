@@ -82,16 +82,24 @@ const getAllCars = async (req, res, next) => {
         user: req.user._id,
         car: { $in: carIds }
       })
-        .select('car rating')
+        .select('car rating comment updatedAt')
         .lean();
 
-      const ratingByCarId = new Map(
-        userReviews.map((item) => [String(item.car), item.rating])
+      const reviewByCarId = new Map(
+        userReviews.map((item) => [
+          String(item.car),
+          {
+            rating: item.rating,
+            comment: item.comment || '',
+            updatedAt: item.updatedAt
+          }
+        ])
       );
 
       carsWithUserRating = normalizedCars.map((car) => ({
         ...car,
-        userRating: ratingByCarId.get(String(car._id)) ?? null
+        userRating: reviewByCarId.get(String(car._id))?.rating ?? null,
+        userReview: reviewByCarId.get(String(car._id)) ?? null
       }));
     }
 
@@ -127,15 +135,24 @@ const getCarById = async (req, res, next) => {
     }
 
     let userRating = null;
+    let userReview = null;
 
     if (req.user?._id) {
       const review = await Review.findOne({ car: car._id, user: req.user._id }).lean();
       userRating = review?.rating ?? null;
+      userReview = review
+        ? {
+            _id: String(review._id),
+            rating: review.rating,
+            comment: review.comment || '',
+            updatedAt: review.updatedAt
+          }
+        : null;
     }
 
     res.status(200).json({
       success: true,
-      data: { car: { ...normalizeCarImages(car), userRating } }
+      data: { car: { ...normalizeCarImages(car), userRating, userReview } }
     });
   } catch (error) {
     next(error);
