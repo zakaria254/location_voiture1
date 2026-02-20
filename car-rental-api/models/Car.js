@@ -66,6 +66,19 @@ const carSchema = new mongoose.Schema(
       type: String,
       maxlength: [500, 'La description ne peut pas dépasser 500 caractères'],
       trim: true
+    },
+
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: [0, 'La note moyenne ne peut pas être inférieure à 0'],
+      max: [5, 'La note moyenne ne peut pas dépasser 5']
+    },
+
+    totalRatings: {
+      type: Number,
+      default: 0,
+      min: [0, 'Le nombre total de notes ne peut pas être négatif']
     }
   },
   {
